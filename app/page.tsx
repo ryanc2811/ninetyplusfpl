@@ -19,6 +19,9 @@ type Player = {
   risk: "Low" | "Medium" | "High";
   trend: number;
   tag?: string;
+  confidence?: number;
+  fixtures?: string[];
+  breakdown?: number[];
 };
 
 const fallbackPlayers: Player[] = [
@@ -71,21 +74,28 @@ export default function Home() {
   const [activeChip, setActiveChip] = useState("None");
   const [optimising, setOptimising] = useState(false);
   const [optimised, setOptimised] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(40);
+  const [modelVersion, setModelVersion] = useState("preview-v1");
 
   useEffect(() => {
     fetch("/api/fpl")
       .then((response) => {
         if (!response.ok) throw new Error("Live feed unavailable");
-        return response.json() as Promise<{ players: Player[] }>;
+        return response.json() as Promise<{ players: Player[]; model?: { version: string } }>;
       })
       .then((data) => {
         if (data.players?.length) {
           setPlayers(data.players);
           setLive(true);
+          setModelVersion(data.model?.version || "fixture-blend-v2");
         }
       })
       .catch(() => setLive(false));
   }, []);
+
+  useEffect(() => {
+    setVisibleCount(40);
+  }, [position, query, range]);
 
   const shownPlayers = useMemo(() => {
     return players
@@ -299,11 +309,14 @@ export default function Home() {
               <div className="segmented"><button className={range === 1 ? "selected" : ""} onClick={() => setRange(1)}>1 GW</button><button className={range === 3 ? "selected" : ""} onClick={() => setRange(3)}>3 GW</button></div>
             </div>
             <article className="panel player-table-wrap">
-              <div className="table-summary"><div><span className="eyebrow">AI RANKING</span><h2>{shownPlayers.length} players modelled</h2></div><p><span className="live-dot" /> {live ? "Live prices & availability" : "Preview dataset"} · Updated now</p></div>
+              <div className="table-summary">
+                <div><span className="eyebrow">AI RANKING · {modelVersion.toUpperCase()}</span><h2>{shownPlayers.length} players modelled</h2></div>
+                <div className="data-health"><span><i className={live ? "health-good" : "health-warn"} /> {live ? "Official feed connected" : "Preview dataset"}</span><span>8 feature families</span><span>3-GW fixture horizon</span></div>
+              </div>
               <div className="player-table">
-                <div className="player-row table-head"><span>Rank / player</span><span>Fixture</span><span>Price</span><span>{range} GW xPts</span><span>Form</span><span>Start</span><span>Own.</span><span>Signal</span></div>
-                {shownPlayers.map((player, index) => (
-                  <button className="player-row" key={player.id}>
+                <div className="player-row table-head"><span>Rank / player</span><span>Fixture</span><span>Price</span><span>{range} GW xPts</span><span>Form</span><span>Start</span><span>Own.</span><span>Confidence</span></div>
+                {shownPlayers.slice(0, visibleCount).map((player, index) => (
+                  <button className="player-row" key={player.id} title={player.fixtures?.length ? `Next fixtures: ${player.fixtures.join(" · ")}` : undefined}>
                     <span className="player-identity"><i>{index + 1}</i><b>{player.name}<small>{player.team} · {player.position}</small></b>{player.tag && <em>{player.tag}</em>}</span>
                     <span className="fixture-cell"><b>{player.opponent}</b><small>{player.venue}</small></span>
                     <span>£{player.price.toFixed(1)}</span>
@@ -311,10 +324,11 @@ export default function Home() {
                     <span>{player.form.toFixed(1)}</span>
                     <span>{player.minutes}%</span>
                     <span>{player.ownership.toFixed(1)}%</span>
-                    <span className={player.trend >= 0 ? "positive" : "negative"}>{player.trend >= 0 ? "↗" : "↘"} {Math.abs(player.trend).toFixed(1)}</span>
+                    <span className="confidence-cell"><i style={{ width: `${player.confidence ?? 58}%` }} /><b>{player.confidence ?? 58}%</b></span>
                   </button>
                 ))}
               </div>
+              {visibleCount < shownPlayers.length && <button className="load-more" onClick={() => setVisibleCount((count) => count + 40)}>Show 40 more <span>{shownPlayers.length - visibleCount} remaining</span></button>}
             </article>
           </div>
         )}
