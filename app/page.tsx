@@ -1,12 +1,13 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type {
   BacktestSummary,
   ExpectedMinutesProjection,
   FplProjectionResponse,
   PlayerPointsProjection,
   PointsBreakdown,
+  TeamOutlook,
 } from "../lib/contracts/fpl";
 import type {
   LeagueInsightsResponse,
@@ -15,7 +16,7 @@ import type {
   ManagerSummary,
 } from "../lib/contracts/leagues";
 import { createChipPlan, managerChoicesFromPlan, squadStrategyForGameweek, validateChipPlan, type ChipPlanItem } from "../lib/chip-strategy";
-import { FORMATIONS, optimiseSquad, pitchLayout, projectedStrategyPoints, replaceSquadPlayer, replacementError, resolveCaptaincy, selectBestLineup, selectLineup, swapLineupPlayer, validateLineup, validateSquad, type Formation, type SquadAsset } from "../lib/squad-builder";
+import { FORMATIONS, optimiseSquad, pitchLayout, projectedStrategyPoints, replaceSquadPlayer, replacementError, resolveCaptaincy, selectBestLineup, selectLineup, swapLineupPlayer, templateLineup, validateLineup, validateSquad, type Formation, type SquadAsset } from "../lib/squad-builder";
 
 type Position = "GK" | "DEF" | "MID" | "FWD";
 type Player = {
@@ -108,12 +109,6 @@ function playerToSquadAsset(player: Player): SquadAsset {
   };
 }
 
-const fixtureRows = [
-  { team: "ARS", next: ["LEE", "NEW", "BUR"], score: 92, label: "Attack + defence" },
-  { team: "MUN", next: ["FUL", "WHU", "BRE"], score: 87, label: "Attack" },
-  { team: "NFO", next: ["EVE", "SUN", "AVL"], score: 81, label: "Value route" },
-];
-
 const BADGE_ICONS: Record<string, string> = {
   "manager-of-the-month": "★",
   "best-gameweek": "▲",
@@ -123,6 +118,77 @@ const BADGE_ICONS: Record<string, string> = {
 };
 
 const TEAM_ID_STORAGE_KEY = "ninety-plus:fpl-team-id";
+const THEME_STORAGE_KEY = "ninety-plus:theme";
+
+/**
+ * The theme lives outside React: an attribute on <html>, a localStorage entry
+ * and the OS preference. It is read through useSyncExternalStore so the toggle
+ * label always reflects what is actually applied.
+ */
+type Theme = "light" | "dark";
+const themeListeners = new Set<() => void>();
+
+function subscribeToTheme(onChange: () => void) {
+  const media = window.matchMedia("(prefers-color-scheme: dark)");
+  themeListeners.add(onChange);
+  media.addEventListener("change", onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    themeListeners.delete(onChange);
+    media.removeEventListener("change", onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
+
+function readTheme(): Theme {
+  const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+  if (stored === "dark" || stored === "light") return stored;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+/** The server cannot know the preference; the inline head script corrects it. */
+function readServerTheme(): Theme {
+  return "light";
+}
+
+function writeTheme(next: Theme) {
+  document.documentElement.setAttribute("data-theme", next);
+  window.localStorage.setItem(THEME_STORAGE_KEY, next);
+  themeListeners.forEach((listener) => listener());
+}
+
+/**
+ * Eases a number toward its target so headline figures land rather than snap.
+ * Returns the target immediately when the user has asked for reduced motion.
+ */
+function useCountUp(target: number, decimals = 1) {
+  const [display, setDisplay] = useState(target);
+  const previous = useRef(target);
+
+  useEffect(() => {
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const from = previous.current;
+    previous.current = target;
+    if (reduced || from === target) {
+      setDisplay(target);
+      return;
+    }
+    const duration = 520;
+    const start = performance.now();
+    let frame = 0;
+    const tick = (now: number) => {
+      const progress = Math.min(1, (now - start) / duration);
+      // easeOutCubic
+      const eased = 1 - (1 - progress) ** 3;
+      setDisplay(from + (target - from) * eased);
+      if (progress < 1) frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [target]);
+
+  return display.toFixed(decimals);
+}
 
 export default function Home() {
   const [view, setView] = useState<"overview" | "squad" | "players" | "strategy" | "leagues">("overview");
@@ -152,6 +218,9 @@ export default function Home() {
   const [feedStatus, setFeedStatus] = useState<"loading" | "live" | "fallback">("loading");
   const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+  const [nextDeadline, setNextDeadline] = useState<string | null>(null);
+  const [nextEvent, setNextEvent] = useState(1);
+  const [teamOutlook, setTeamOutlook] = useState<TeamOutlook[]>([]);
   const [builderSquad, setBuilderSquad] = useState<SquadAsset[]>(initialBuilderSquad);
   const [formation, setFormation] = useState<Formation>(initialLineup?.formation ?? "4-4-2");
   const [starterIds, setStarterIds] = useState<number[]>(
@@ -163,6 +232,7 @@ export default function Home() {
   const [builderQuery, setBuilderQuery] = useState("");
   const [builderMessage, setBuilderMessage] = useState("Select a player on the pitch or bench to replace them.");
   const [benchOrderIds, setBenchOrderIds] = useState<number[]>([]);
+  const theme = useSyncExternalStore(subscribeToTheme, readTheme, readServerTheme);
   const [teamIdInput, setTeamIdInput] = useState("");
   const [manager, setManager] = useState<ManagerSummary | null>(null);
   const [managerLeagues, setManagerLeagues] = useState<LeagueSummary[]>([]);
@@ -304,6 +374,9 @@ export default function Home() {
           setSimulationCount(data.model?.simulationCount ?? null);
           setEventModelVersion(data.model?.eventModelVersion ?? null);
           setUpdatedAt(data.updatedAt);
+          setNextDeadline(data.nextDeadline ?? null);
+          setNextEvent(data.nextEvent ?? 1);
+          setTeamOutlook(data.teamOutlook ?? []);
           setFeedStatus("live");
         }
       })
@@ -422,6 +495,35 @@ export default function Home() {
     () => [...players].sort((a, b) => b.xp1 - a.xp1).slice(0, 3),
     [players],
   );
+  const template = useMemo(
+    () => templateLineup(
+      players.map((player) => ({ ...playerToSquadAsset(player), ownership: player.ownership })),
+      1,
+    ),
+    [players],
+  );
+  const templateEdge = template ? Number((projectedGw1 - template.points).toFixed(1)) : null;
+  // What share of the whole 15-player squad's projection the chosen XI captures.
+  const squadCapture = useMemo(() => {
+    const squadTotal = builderSquad.reduce((total, player) => total + player.xp1, 0);
+    if (squadTotal <= 0) return 0;
+    const startingTotal = builderStarters.reduce((total, player) => total + player.xp1, 0);
+    return Math.round((startingTotal / squadTotal) * 100);
+  }, [builderSquad, builderStarters]);
+  const animatedGw1 = useCountUp(projectedGw1);
+  const animatedGw3 = useCountUp(projectedGw3);
+  const animatedSquadValue = useCountUp(builderValidation.cost);
+  const deadlineLabel = useMemo(() => {
+    if (!nextDeadline) return "DEADLINE PENDING";
+    const date = new Date(nextDeadline);
+    if (Number.isNaN(date.getTime())) return "DEADLINE PENDING";
+    return `DEADLINE ${date.toLocaleString(undefined, {
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).toUpperCase()}`;
+  }, [nextDeadline]);
 
   function runOptimiser() {
     setOptimising(true);
@@ -653,10 +755,18 @@ export default function Home() {
       <section className="workspace">
         <header className="topbar">
           <div>
-            <span className="eyebrow">GAMEWEEK 1 · DEADLINE 15 AUG, 18:30</span>
+            <span className="eyebrow">GAMEWEEK {nextEvent} · {deadlineLabel}</span>
             <h1>{view === "overview" ? "Decision room" : view === "squad" ? "Squad builder" : view === "players" ? "Player lab" : view === "leagues" ? "Leagues" : "Chip planner"}</h1>
           </div>
           <div className="top-actions">
+            <button
+              className="theme-toggle"
+              onClick={() => writeTheme(theme === "dark" ? "light" : "dark")}
+              aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+              title={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+            >
+              <i>{theme === "dark" ? "☀" : "☾"}</i>
+            </button>
             <button className="icon-button" aria-label="Notifications">○<span className="notification" /></button>
             <button className="primary-button" onClick={runOptimiser}>{optimising ? "Optimising live XI…" : optimised ? "Optimised ✓" : "Run optimiser"} <span>↗</span></button>
           </div>
@@ -672,19 +782,23 @@ export default function Home() {
 
             <div className="metric-grid">
               <article className="metric hero-metric">
-                <span>PROJECTED GW1</span>
-                <div className="metric-value">{projectedGw1.toFixed(1)} <small>pts</small></div>
-                <div className="meter"><i style={{ width: "78%" }} /></div>
-                <footer><b>Top 12%</b><span>90% range: 54–91</span></footer>
+                <span>PROJECTED GW{nextEvent}</span>
+                <div className="metric-value">{animatedGw1} <small>pts</small></div>
+                <div className="meter"><i style={{ width: `${squadCapture}%` }} /></div>
+                <footer><b>{squadCapture}% of squad</b><span>starting XI share</span></footer>
               </article>
               <article className="metric">
                 <span>3-GW OUTLOOK</span>
-                <div className="metric-value">{projectedGw3.toFixed(1)} <small>pts</small></div>
-                <footer className="positive">↑ 8.4 vs template</footer>
+                <div className="metric-value">{animatedGw3} <small>pts</small></div>
+                <footer className={templateEdge !== null && templateEdge >= 0 ? "positive" : undefined}>
+                  {templateEdge === null
+                    ? "Template comparison pending"
+                    : `${templateEdge >= 0 ? "↑" : "↓"} ${Math.abs(templateEdge).toFixed(1)} vs template XI`}
+                </footer>
               </article>
               <article className="metric">
                 <span>SQUAD VALUE</span>
-                <div className="metric-value">£{builderValidation.cost.toFixed(1)}<span className="bank">+ £{(100 - builderValidation.cost).toFixed(1)} ITB</span></div>
+                <div className="metric-value">£{animatedSquadValue}<span className="bank">+ £{(100 - builderValidation.cost).toFixed(1)} ITB</span></div>
                 <footer>15 / 15 · Rules valid</footer>
               </article>
               <article className="metric">
@@ -748,14 +862,26 @@ export default function Home() {
 
             <div className="lower-grid">
               <article className="panel">
-                <div className="panel-head"><div><span className="eyebrow">FIXTURE MODEL</span><h2>Three-week run</h2></div><span className="subtle">Opponent-adjusted</span></div>
-                {fixtureRows.map((row) => (
+                <div className="panel-head"><div><span className="eyebrow">FIXTURE MODEL</span><h2>Three-week run</h2></div><span className="subtle">Expected goals</span></div>
+                {teamOutlook.slice(0, 5).map((row) => (
                   <div className="fixture-row" key={row.team}>
-                    <b>{row.team}</b><span>{row.label}</span>
-                    <div className="fixtures">{row.next.map((team, index) => <i key={team} className={index === 0 ? "easy" : index === 1 ? "medium" : "hard"}>{team}</i>)}</div>
-                    <div className="fixture-score"><strong>{row.score}</strong><small>/ 100</small></div>
+                    <b>{row.team}</b>
+                    <span>{row.attackScore >= row.defenceScore + 15 ? "Attack" : row.defenceScore >= row.attackScore + 15 ? "Defence" : "Attack + defence"}</span>
+                    <div className="fixtures">
+                      {row.fixtures.map((fixture, index) => (
+                        <i
+                          key={`${fixture.opponent}-${index}`}
+                          className={fixture.difficulty <= 2 ? "easy" : fixture.difficulty === 3 ? "medium" : "hard"}
+                          title={`${fixture.opponent} (${fixture.venue}) · ${fixture.expectedGoalsFor} xGF, ${fixture.expectedGoalsAgainst} xGA`}
+                        >
+                          {fixture.opponent}{fixture.venue === "A" ? " ↗" : ""}
+                        </i>
+                      ))}
+                    </div>
+                    <div className="fixture-score"><strong>{row.overallScore}</strong><small>/ 100</small></div>
                   </div>
                 ))}
+                {!teamOutlook.length && <div className="picker-empty">Fixture model loading…</div>}
               </article>
               <article className="panel">
                 <div className="panel-head"><div><span className="eyebrow">CHIP FORECAST</span><h2>Season leverage</h2></div><button className="text-button" onClick={() => setView("strategy")}>Plan all →</button></div>
@@ -883,7 +1009,18 @@ export default function Home() {
               </div>
               <div className="player-table">
                 <div className="player-row table-head"><span>Rank / player</span><span>Fixture</span><span>Price</span><span>{range} GW xPts</span><span>Form</span><span>xMins</span><span>Own.</span><span>Confidence</span></div>
-                {shownPlayers.slice(0, visibleCount).map((player, index) => (
+                {feedStatus === "loading" && Array.from({ length: 8 }, (_, index) => (
+                  <div className="skeleton-row" key={`skeleton-${index}`} aria-hidden="true">
+                    <span className="skeleton" style={{ width: 22 }} />
+                    <span className="skeleton" style={{ width: 150 }} />
+                    <span className="skeleton" style={{ width: 60 }} />
+                    <span className="skeleton" style={{ width: 44 }} />
+                    <span className="skeleton" style={{ width: 52 }} />
+                    <span className="skeleton" style={{ width: 40 }} />
+                    <span className="skeleton" style={{ width: 46 }} />
+                  </div>
+                ))}
+                {feedStatus !== "loading" && shownPlayers.slice(0, visibleCount).map((player, index) => (
                   <Fragment key={player.id}>
                     <button className="player-row" title={player.fixtures?.length ? `Next fixtures: ${player.fixtures.join(" · ")}` : undefined} onClick={() => setSelectedPlayerId((current) => current === player.id ? null : player.id)} aria-expanded={selectedPlayerId === player.id}>
                       <span className="player-identity"><i>{index + 1}</i><b>{player.name}<small>{player.team} · {player.position}</small></b>{player.tag && <em>{player.tag}</em>}</span>
@@ -1011,11 +1148,16 @@ export default function Home() {
                 <div className="explain-stat"><span>Plan status</span><b className="positive">{chipPlanValidation.valid ? "Rules valid" : "Needs attention"}</b></div><div className="explain-stat"><span>Future flexibility</span><b>{8 - chipPlan.filter((item) => item.locked).length} chips</b></div>
               </article>
               <article className="panel">
-                <span className="eyebrow">PAST WINNER DNA</span><h2>Elite-manager priors</h2>
-                <div className="dna-row"><span>Captaincy discipline</span><i><b style={{ width: "92%" }} /></i><em>92</em></div>
-                <div className="dna-row"><span>Transfer patience</span><i><b style={{ width: "84%" }} /></i><em>84</em></div>
-                <div className="dna-row"><span>Template timing</span><i><b style={{ width: "76%" }} /></i><em>76</em></div>
-                <p className="model-note">Historical strategy is used as a prior, never as leakage: the model learns decisions available at each past deadline only.</p>
+                <span className="eyebrow">TEMPLATE DIVERGENCE</span><h2>How different are you?</h2>
+                {template ? (
+                  <>
+                    <p className="body-copy">The template XI is the highest-owned legal eleven in the game right now, captained by the most-owned outfield asset.</p>
+                    <div className="explain-stat"><span>Template projection</span><b>{template.points.toFixed(1)} pts</b></div>
+                    <div className="explain-stat"><span>Template captain</span><b>{template.captain.name}</b></div>
+                    <div className="explain-stat"><span>Your edge</span><b className={templateEdge !== null && templateEdge >= 0 ? "positive" : "negative"}>{templateEdge !== null ? `${templateEdge >= 0 ? "+" : ""}${templateEdge.toFixed(1)} pts` : "—"}</b></div>
+                    <div className="explain-stat"><span>Shared starters</span><b>{builderStarters.filter((player) => template.starters.some((asset) => asset.id === player.id)).length} / 11</b></div>
+                  </>
+                ) : <p className="body-copy">Template comparison becomes available once the live player market has loaded.</p>}
               </article>
             </aside>
           </div>

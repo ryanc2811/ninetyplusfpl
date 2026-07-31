@@ -6,6 +6,7 @@ import type {
   PlayerProjection,
   PointsBreakdown,
   Position,
+  TeamOutlook,
 } from "./contracts/fpl";
 import { VERIFIED_TEAM_ROLE_SIGNALS } from "./team-news.ts";
 import {
@@ -875,6 +876,73 @@ export function projectPlayer(
       observationWeight: rates.observationWeight,
     },
   };
+}
+
+/**
+ * Scores each team's upcoming run using the same expected goals that drive
+ * player projections, so the fixture ticker and the projections cannot
+ * disagree.
+ */
+export function buildTeamOutlook(
+  teams: Map<number, string>,
+  fixtures: FplFixture[],
+  nextEvent: number,
+  context: ProjectionContext,
+  horizon = 3,
+): TeamOutlook[] {
+  const outlook: TeamOutlook[] = [];
+
+  for (const [teamId, shortName] of teams) {
+    const upcoming = fixtures
+      .filter((fixture) => !fixture.finished && fixture.event !== null && fixture.event >= nextEvent)
+      .filter((fixture) => fixture.team_h === teamId || fixture.team_a === teamId)
+      .sort((a, b) => numeric(a.event) - numeric(b.event))
+      .slice(0, horizon);
+    if (!upcoming.length) continue;
+
+    const scored = upcoming.map((fixture) => {
+      const home = fixture.team_h === teamId;
+      const opponentId = home ? fixture.team_a : fixture.team_h;
+      const difficulty = home ? fixture.team_h_difficulty : fixture.team_a_difficulty;
+      const expectation = expectFixture(
+        context.teamStrengths,
+        teamId,
+        opponentId,
+        home,
+        difficulty,
+      );
+      return {
+        fixture: {
+          opponent: teams.get(opponentId) || "TBC",
+          venue: home ? ("H" as const) : ("A" as const),
+          difficulty,
+          expectedGoalsFor: Number(expectation.expectedGoalsFor.toFixed(2)),
+          expectedGoalsAgainst: Number(expectation.expectedGoalsAgainst.toFixed(2)),
+        },
+        cleanSheetProbability: expectation.cleanSheetProbability,
+      };
+    });
+
+    const meanFor =
+      scored.reduce((sum, entry) => sum + entry.fixture.expectedGoalsFor, 0) / scored.length;
+    const meanCleanSheet =
+      scored.reduce((sum, entry) => sum + entry.cleanSheetProbability, 0) / scored.length;
+
+    // Map onto 0-100 against plausible per-fixture bounds so the score reads
+    // like a rating rather than a raw expectation.
+    const attackScore = Math.round(clamp((meanFor / 2.6) * 100, 0, 100));
+    const defenceScore = Math.round(clamp((meanCleanSheet / 0.55) * 100, 0, 100));
+
+    outlook.push({
+      team: shortName,
+      fixtures: scored.map((entry) => entry.fixture),
+      attackScore,
+      defenceScore,
+      overallScore: Math.round(attackScore * 0.55 + defenceScore * 0.45),
+    });
+  }
+
+  return outlook.sort((a, b) => b.overallScore - a.overallScore);
 }
 
 export function validateProjectionData(players: PlayerProjection[], fixtures: FplFixture[]): DataQualitySummary {

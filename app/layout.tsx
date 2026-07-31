@@ -19,6 +19,19 @@ export const metadata: Metadata = {
   icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },
 };
 
+/**
+ * Applies the stored theme before first paint. Without this the page renders
+ * in the default theme and then snaps, which is worse than no toggle at all.
+ */
+const THEME_SCRIPT = `(function(){try{var t=localStorage.getItem("ninety-plus:theme");if(t==="dark"||t==="light"){document.documentElement.setAttribute("data-theme",t);}}catch(e){}})();`;
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body className={`${geist.variable} ${mono.variable} ${editorial.variable}`}>{children}</body></html>;
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
+      <body className={`${geist.variable} ${mono.variable} ${editorial.variable}`}>{children}</body>
+    </html>
+  );
 }

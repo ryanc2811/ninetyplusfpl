@@ -115,6 +115,22 @@ export type MatchForecastProjection = {
   modelVersion: "time-decayed-poisson-v1";
 };
 
+/** A team's upcoming run, scored by the same model that drives projections. */
+export type TeamOutlook = {
+  team: string;
+  fixtures: Array<{
+    opponent: string;
+    venue: "H" | "A";
+    difficulty: number;
+    expectedGoalsFor: number;
+    expectedGoalsAgainst: number;
+  }>;
+  /** 0-100 composite of attacking and defensive expectation over the run. */
+  attackScore: number;
+  defenceScore: number;
+  overallScore: number;
+};
+
 export type DataQualitySummary = {
   valid: boolean;
   issues: string[];
@@ -171,6 +187,9 @@ export type FplProjectionResponse = {
     eventModelVersion?: PlayerPointsProjection["eventModelVersion"];
   };
   nextEvent: number;
+  /** ISO deadline for `nextEvent`, straight from the official event feed. */
+  nextDeadline: string | null;
+  teamOutlook: TeamOutlook[];
   updatedAt: string;
   provenance: ProjectionProvenance;
   dataQuality: DataQualitySummary;

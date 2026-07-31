@@ -1,6 +1,7 @@
 import type { FplProjectionResponse } from "../../../lib/contracts/fpl";
 import {
   buildProjectionContext,
+  buildTeamOutlook,
   projectExpectedMinutesForSquad,
   projectPlayer,
   validateProjectionData,
@@ -112,6 +113,9 @@ export async function GET() {
           ?.eventModelVersion,
       },
       nextEvent,
+      nextDeadline:
+        snapshot.events.find((event) => event.id === nextEvent)?.deadline_time ?? null,
+      teamOutlook: buildTeamOutlook(teams, snapshot.fixtures, nextEvent, context),
       updatedAt: snapshot.provenance.retrievedAt,
       provenance: snapshot.provenance,
       dataQuality,

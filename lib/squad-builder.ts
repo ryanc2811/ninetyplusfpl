@@ -17,6 +17,52 @@ export const FORMATIONS: Formation[] = ["3-4-3", "3-5-2", "4-4-2", "4-3-3", "4-5
 
 const REQUIRED: Record<Position, number> = { GK: 2, DEF: 5, MID: 5, FWD: 3 };
 
+/**
+ * The XI the crowd is picking: the highest-owned legal starting eleven,
+ * captained by the highest-owned outfield asset.
+ *
+ * This is the honest reference point for "how different am I?" — comparing a
+ * squad against it measures divergence from the template rather than against
+ * an invented benchmark.
+ */
+export function templateLineup<T extends SquadAsset & { ownership: number }>(
+  players: T[],
+  horizon: 1 | 3 = 1,
+) {
+  const byOwnership = [...players].sort((a, b) => b.ownership - a.ownership);
+  const take = (position: Position, count: number) =>
+    byOwnership.filter((player) => player.position === position).slice(0, count);
+
+  let best: { starters: T[]; points: number } | null = null;
+  for (const formation of FORMATIONS) {
+    const [defenders, midfielders, forwards] = formation.split("-").map(Number);
+    const starters = [
+      ...take("GK", 1),
+      ...take("DEF", defenders),
+      ...take("MID", midfielders),
+      ...take("FWD", forwards),
+    ];
+    if (starters.length !== 11) continue;
+    const points = starters.reduce(
+      (total, player) => total + (horizon === 1 ? player.xp1 : player.xp3),
+      0,
+    );
+    if (!best || points > best.points) best = { starters, points };
+  }
+  if (!best) return null;
+
+  const captain = [...best.starters]
+    .filter((player) => player.position !== "GK")
+    .sort((a, b) => b.ownership - a.ownership)[0] ?? best.starters[0];
+
+  return {
+    starters: best.starters,
+    captain,
+    // Captain scores twice, matching how a real Gameweek is scored.
+    points: Number((best.points + (horizon === 1 ? captain.xp1 : captain.xp3)).toFixed(1)),
+  };
+}
+
 export function squadCost(squad: SquadAsset[]) {
   return Number(squad.reduce((total, player) => total + player.price, 0).toFixed(1));
 }

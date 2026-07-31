@@ -15,6 +15,7 @@ export type FplEvent = {
   id: number;
   is_next: boolean;
   finished: boolean;
+  deadline_time?: string | null;
 };
 
 export type FplSourceSnapshot = {
