@@ -9,8 +9,15 @@ import { OfficialFplLeagueProvider } from "../../../../lib/providers/league-prov
  * capped. Beyond the cap the league is reported as truncated rather than the
  * application issuing hundreds of requests against a public API.
  */
-const DEFAULT_MAX_MANAGERS = 50;
+const DEFAULT_MAX_MANAGERS = Number(process.env.LEAGUE_MAX_MANAGERS) || 50;
 const HARD_MAX_MANAGERS = 100;
+
+/**
+ * Analysing a league costs one upstream request per manager, which can exceed
+ * a platform's default function timeout. Serverless hosts cap this by plan, so
+ * lower `LEAGUE_MAX_MANAGERS` if deployments time out rather than raising this.
+ */
+export const maxDuration = 60;
 
 export async function GET(
   request: Request,

@@ -98,6 +98,33 @@ backfilled when the same source CSV is imported again after migration `0006`.
 
 The points simulator uses the official 2026/27 scoring thresholds and match-ranked bonus allocation. Its BPS input is currently a transparent proxy because the public feed does not contain every granular Opta action used by the live BPS calculation. It is an experimental forecast, not an exact reconstruction of official bonus.
 
+## Deployment
+
+The project builds for two targets from one codebase.
+
+**Cloudflare Workers** (the original target) via `npm run build`, which runs
+`vinext build` and emits a Worker bundle to `dist/`. The rendered-HTML test
+imports that bundle, so this script must keep producing Worker output.
+
+**Vercel** via `npm run vercel-build`, which runs a standard `next build`.
+Vercel honours a `vercel-build` script ahead of `build`, so no dashboard
+configuration is required and the Cloudflare path is untouched.
+
+No application code is Cloudflare-specific. `db/index.ts` imports
+`cloudflare:workers`, but nothing in `app/` or `lib/` imports it — it is
+reachable only from the opt-in `examples/d1` sample.
+
+Environment variables are all optional:
+
+| Variable | Effect when unset |
+| --- | --- |
+| `FPL_DATA_API_URL` | The web app reads the official FPL API directly instead of the Python data service. |
+| `LEAGUE_MAX_MANAGERS` | League analysis covers up to 50 managers. |
+
+League insights cost one upstream request per manager, so `/api/leagues/[id]`
+declares `maxDuration = 60`. Lower `LEAGUE_MAX_MANAGERS` if a host's function
+timeout is shorter than that.
+
 ## Important boundaries
 
 - Never request or store an FPL password.
