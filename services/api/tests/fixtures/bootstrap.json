@@ -1,0 +1,21 @@
+{
+  "events": [
+    {
+      "id": 1,
+      "name": "Gameweek 1",
+      "deadline_time": "2026-08-15T10:00:00Z",
+      "is_next": true,
+      "finished": false
+    }
+  ],
+  "teams": [
+    {"id": 1, "name": "North City", "short_name": "NTH", "strength": 4},
+    {"id": 2, "name": "South United", "short_name": "STH", "strength": 3}
+  ],
+  "elements": [
+    {"id": 101, "team": 1, "web_name": "Keeper", "first_name": "Alex", "second_name": "Keeper", "element_type": 1, "now_cost": 50, "total_points": 0, "minutes": 0, "starts": 0, "form": "0.0", "selected_by_percent": "8.2", "status": "a", "chance_of_playing_next_round": null},
+    {"id": 102, "team": 1, "web_name": "Back", "first_name": "Drew", "second_name": "Back", "element_type": 2, "now_cost": 55, "total_points": 0, "minutes": 0, "starts": 0, "form": "0.0", "selected_by_percent": "5.0", "status": "a", "chance_of_playing_next_round": 100},
+    {"id": 201, "team": 2, "web_name": "Middle", "first_name": "Sam", "second_name": "Middle", "element_type": 3, "now_cost": 75, "total_points": 0, "minutes": 0, "starts": 0, "form": "0.0", "selected_by_percent": "11.1", "status": "a", "chance_of_playing_next_round": 100},
+    {"id": 202, "team": 2, "web_name": "Forward", "first_name": "Jo", "second_name": "Forward", "element_type": 4, "now_cost": 85, "total_points": 0, "minutes": 0, "starts": 0, "form": "0.0", "selected_by_percent": "13.3", "status": "d", "chance_of_playing_next_round": "75"}
+  ]
+}
