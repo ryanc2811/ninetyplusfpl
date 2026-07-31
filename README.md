@@ -11,6 +11,14 @@ The current product is an early baseline—not a trained production AI model. It
 - Player, team and fixture quality gates
 - Expected-minutes probabilities and evidence
 - One- and three-Gameweek baseline projections
+- Additive component scoring: appearance, goals, assists, clean sheets,
+  defensive contribution, saves, bonus, goals conceded and cards
+- Per-event point values read from the live `game_config.scoring` payload
+- Per-90 rates shrunk toward position-and-price priors by minutes played
+- Team attack and defence strength derived from squad rates, blended with the
+  official difficulty rating where Premier League evidence is thin
+- International tournament workload applied to expected minutes
+- Per-player points breakdown surfaced in the Player Lab
 - Typed TypeScript API contract
 - Responsive prediction table with loading, fallback, empty and “Why?” states
 - Functional rules-aware squad builder with live same-position replacements
@@ -99,5 +107,16 @@ The points simulator uses the official 2026/27 scoring thresholds and match-rank
 - The historical loader requires an explicit licensing status. This records an operator assertion; it does not itself grant or verify commercial data rights.
 - Numerical modelling will migrate incrementally behind a versioned API contract to Python services; the existing web app should not be rewritten wholesale.
 - No secrets belong in source control.
+
+The web projection is an additive expected-value model, described in
+[ADR 0010](docs/adr/0010-additive-component-points-model.md). It is a
+transparent baseline, not a trained production model, and has not yet been
+backtested against realised season outcomes.
+
+International tournament workload
+([ADR 0011](docs/adr/0011-international-tournament-workload.md)) ships with a
+deliberately incomplete signal table. Only nations verified from a stated source
+appear in `lib/workload.ts`; any nation absent from it receives no adjustment.
+Add the remaining runs before relying on opening-Gameweek minutes.
 
 See [docs/architecture-plan.md](docs/architecture-plan.md) and [ADR 0001](docs/adr/0001-incremental-service-boundary.md).

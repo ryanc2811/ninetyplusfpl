@@ -4,9 +4,33 @@ import type {
   MatchForecastProjection,
   PlayerPointsProjection,
   PlayerProjection,
+  PointsBreakdown,
   Position,
 } from "./contracts/fpl";
 import { VERIFIED_TEAM_ROLE_SIGNALS } from "./team-news.ts";
+import {
+  estimatePlayerRates,
+  LEAGUE_GOALS_PER_TEAM,
+  type PlayerRates,
+  type RateSource,
+} from "./player-rates.ts";
+import {
+  buildTeamStrengths,
+  expectFixture,
+  type FixtureExpectation,
+  type TeamStrength,
+} from "./team-strength.ts";
+import {
+  applyWorkload,
+  workloadImpact,
+  type TournamentWorkload,
+} from "./workload.ts";
+import {
+  FALLBACK_SCORING_RULES,
+  resolveScoringRules,
+  type RawScoringConfig,
+  type ScoringRules,
+} from "./scoring-rules.ts";
 
 export type { Position };
 export type FplElement = Record<string, number | string | boolean | null>;
@@ -27,6 +51,7 @@ export type Team = { id: number; short_name: string };
 type FixtureContext = {
   fixtureId: number;
   opponent: string;
+  opponentId: number;
   venue: "H" | "A";
   difficulty: number;
   event: number;
@@ -35,9 +60,7 @@ type FixtureContext = {
 };
 
 const POSITION_BY_ID: Record<number, Position> = { 1: "GK", 2: "DEF", 3: "MID", 4: "FWD" };
-const POSITION_PRIOR: Record<Position, number> = { GK: 2.7, DEF: 2.8, MID: 3.2, FWD: 3 };
 const POSITION_FLOOR_PRICE: Record<Position, number> = { GK: 4, DEF: 4, MID: 4.5, FWD: 4.5 };
-const FIXTURE_MULTIPLIER: Record<number, number> = { 1: 1.22, 2: 1.11, 3: 1, 4: 0.89, 5: 0.78 };
 const TEAM_FORMATIONS = [
   { label: "3-4-3", GK: 1, DEF: 3, MID: 4, FWD: 3 },
   { label: "3-5-2", GK: 1, DEF: 3, MID: 5, FWD: 2 },
@@ -95,6 +118,7 @@ function fixturesForTeam(
       return {
         fixtureId: fixture.id,
         opponent: teams.get(opponentId) || "TBC",
+        opponentId,
         venue: home ? "H" : "A",
         difficulty: home ? fixture.team_h_difficulty : fixture.team_a_difficulty,
         event: numeric(fixture.event),
@@ -521,44 +545,181 @@ export function projectExpectedMinutesForSquad(
   return projections;
 }
 
-function baselinePoints(player: FplElement, position: Position, preseason: boolean) {
-  const officialExpected = numeric(player.ep_next);
-  const form = numeric(player.form);
-  const pointsPerGame = numeric(player.points_per_game);
-  const minutes = numeric(player.minutes);
-  const expectedGoals = numeric(player.expected_goals_per_90);
-  const expectedAssists = numeric(player.expected_assists_per_90);
-  const expectedGoalInvolvements = numeric(player.expected_goal_involvements_per_90);
-  const attackingSignal = Math.max(expectedGoals + expectedAssists, expectedGoalInvolvements);
-  const cleanSheetSignal = numeric(player.clean_sheets_per_90);
-  const defensiveSignal = numeric(player.defensive_contribution_per_90);
-  const price = numeric(player.now_cost) / 10;
-  const pricePrior = POSITION_PRIOR[position] + Math.max(0, price - POSITION_FLOOR_PRICE[position]) * 0.35;
-  const positionSignal =
-    position === "GK" ? cleanSheetSignal * 1.3 :
-    position === "DEF" ? cleanSheetSignal * 1.2 + attackingSignal * 1.1 :
-    position === "MID" ? attackingSignal * 1.8 + defensiveSignal * 0.08 :
-    attackingSignal * 2.1;
-  const hasObservedSeasonData = !preseason && numeric(player.total_points) > 0 && (pointsPerGame > 0 || form > 0);
-  const hasHistoricalSeasonData = preseason && minutes >= 180 && pointsPerGame > 0;
-  if (hasHistoricalSeasonData) {
-    const reliability = clamp(minutes / 1_800, 0.1, 1);
-    const historyWeight = 0.55 * reliability;
-    const officialWeight = officialExpected > 0 ? 0.15 : 0;
-    const priceWeight = 1 - historyWeight - officialWeight;
-    const officialSignal = Math.max(officialExpected, pricePrior * 0.75);
-    return pointsPerGame * historyWeight
-      + officialSignal * officialWeight
-      + pricePrior * priceWeight;
+/** Probability that a Poisson variable with the given mean is at least `k`. */
+function poissonAtLeast(k: number, mean: number) {
+  if (k <= 0) return 1;
+  if (mean <= 0) return 0;
+  let term = Math.exp(-mean);
+  let cumulative = term;
+  for (let i = 1; i < k; i += 1) {
+    term = (term * mean) / i;
+    cumulative += term;
   }
-  const observed = hasObservedSeasonData
-    ? pointsPerGame * 0.42 + form * 0.32 + positionSignal * 0.26
-    : pricePrior;
-  if (officialExpected > 0) {
-    const officialSignal = hasObservedSeasonData ? officialExpected : Math.max(officialExpected, pricePrior * 0.75);
-    return officialSignal * 0.5 + observed * 0.35 + pricePrior * 0.15;
+  return clamp(1 - cumulative, 0, 1);
+}
+
+/**
+ * Expected value of `floor(X / divisor)` for a Poisson variable, used for the
+ * goals-conceded penalty which only scores on completed pairs of goals.
+ */
+function expectedFloorDivision(mean: number, divisor: number) {
+  if (mean <= 0) return 0;
+  let term = Math.exp(-mean);
+  let total = 0;
+  for (let k = 1; k <= 15; k += 1) {
+    term = (term * mean) / k;
+    total += Math.floor(k / divisor) * term;
   }
-  return hasObservedSeasonData ? observed * 0.7 + pricePrior * 0.3 : pricePrior;
+  return total;
+}
+
+/**
+ * Expected bonus points from a BPS rate.
+ *
+ * Bonus is a rank statistic within a match, so it cannot be derived exactly
+ * from a season-long rate. This is a smooth monotone fit calibrated so that a
+ * high-BPS regular (~35 BPS per 90) earns around one bonus point per start, a
+ * mid-table starter (~20) earns around 0.15, and a low-BPS player earns almost
+ * none. It is an approximation and is labelled as such in the evidence.
+ */
+function expectedBonus(bpsPer90: number) {
+  const MAX = 1.7;
+  const CENTRE = 32;
+  const SCALE = 5;
+  return MAX / (1 + Math.exp(-(bpsPer90 - CENTRE) / SCALE));
+}
+
+export type ProjectionContext = {
+  scoring: ScoringRules;
+  teamStrengths: Map<number, TeamStrength>;
+  ratesByPlayer: Map<number, PlayerRates>;
+  workload?: TournamentWorkload;
+};
+
+/**
+ * Builds the shared context a squad-wide projection needs: scoring values, the
+ * per-90 rates for every player and the team strength ratings those rates imply.
+ */
+export function buildProjectionContext(
+  players: FplElement[],
+  expectedMinutesByPlayer: Map<number, ExpectedMinutesProjection>,
+  scoringConfig?: RawScoringConfig | null,
+  workload?: TournamentWorkload,
+): ProjectionContext {
+  const ratesByPlayer = new Map<number, PlayerRates>();
+  const squad = players.map((player) => {
+    const position = POSITION_BY_ID[numeric(player.element_type)] || "MID";
+    const rates = estimatePlayerRates(player as unknown as RateSource, position);
+    const playerId = numeric(player.id);
+    ratesByPlayer.set(playerId, rates);
+    return {
+      playerId,
+      teamId: numeric(player.team),
+      rates,
+      expectedMinutes: expectedMinutesByPlayer.get(playerId)?.expectedMinutes ?? 0,
+    };
+  });
+  return {
+    scoring: resolveScoringRules(scoringConfig),
+    teamStrengths: buildTeamStrengths(squad),
+    ratesByPlayer,
+    workload,
+  };
+}
+
+/**
+ * Expected points for one fixture, summed over the FPL scoring events.
+ *
+ * Every component is conditioned on playing time, so a player with no expected
+ * minutes scores nothing rather than retaining a fraction of a baseline.
+ */
+export function projectFixturePoints(
+  position: Position,
+  rates: PlayerRates,
+  minutes: ExpectedMinutesProjection,
+  fixture: FixtureExpectation,
+  teamBaselineExpectedGoals: number,
+  teamBaselineExpectedGoalsConceded: number,
+  bpsPer90: number,
+  scoring: ScoringRules,
+): PointsBreakdown {
+  const startProbability = minutes.startProbability / 100;
+  const playProbability =
+    startProbability + minutes.substituteProbability / 100;
+  const sixtyProbability = minutes.sixtyMinuteProbability / 100;
+  const minutesShare = minutes.expectedMinutes / 90;
+
+  // Isolate the fixture effect: the player's own rate already reflects the
+  // quality of the side they play for, so scale only by how this fixture
+  // differs from that side's neutral expectation.
+  const attackScale = teamBaselineExpectedGoals > 0
+    ? clamp(fixture.expectedGoalsFor / teamBaselineExpectedGoals, 0.5, 2)
+    : 1;
+  const concedeScale = teamBaselineExpectedGoalsConceded > 0
+    ? clamp(fixture.expectedGoalsAgainst / teamBaselineExpectedGoalsConceded, 0.5, 2)
+    : 1;
+
+  const appearance =
+    playProbability * scoring.shortPlay
+    + sixtyProbability * (scoring.longPlay - scoring.shortPlay);
+
+  const goals = rates.expectedGoals * minutesShare * attackScale * scoring.goals[position];
+  const assists = rates.expectedAssists * minutesShare * attackScale * scoring.assists;
+
+  const cleanSheet =
+    sixtyProbability * fixture.cleanSheetProbability * scoring.cleanSheets[position];
+
+  // Concession only costs points where the position scores it, and only for
+  // the goals conceded while the player is on the pitch.
+  const goalsConceded = scoring.goalsConceded[position] !== 0
+    ? expectedFloorDivision(
+        fixture.expectedGoalsAgainst * minutesShare,
+        scoring.goalsConcededPer,
+      )
+      * scoring.goalsConceded[position]
+      * playProbability
+    : 0;
+
+  const saves = position === "GK"
+    ? (rates.saves * minutesShare * concedeScale * scoring.saves) / scoring.savesPer
+    : 0;
+
+  // A defensive contribution needs a near-full match, so it is conditioned on
+  // starting and evaluated at the minutes a start is expected to bring.
+  const threshold = scoring.defensiveContributionThreshold[position];
+  const defensiveContribution = Number.isFinite(threshold)
+    ? startProbability
+      * poissonAtLeast(
+          Math.ceil(threshold),
+          rates.defensiveActions * (minutes.expectedMinutesIfStart / 90),
+        )
+      * scoring.defensiveContribution[position]
+    : 0;
+
+  const bonus =
+    expectedBonus(bpsPer90) * minutesShare * clamp(attackScale, 0.8, 1.25) * scoring.bonus;
+
+  const cards =
+    rates.yellowCards * minutesShare * scoring.yellowCards
+    + rates.redCards * minutesShare * scoring.redCards;
+
+  const total =
+    appearance + goals + assists + cleanSheet + goalsConceded + saves
+    + defensiveContribution + bonus + cards;
+
+  const round2 = (value: number) => Number(value.toFixed(2));
+  return {
+    appearance: round2(appearance),
+    goals: round2(goals),
+    assists: round2(assists),
+    cleanSheet: round2(cleanSheet),
+    goalsConceded: round2(goalsConceded),
+    saves: round2(saves),
+    defensiveContribution: round2(defensiveContribution),
+    bonus: round2(bonus),
+    cards: round2(cards),
+    total: round2(Math.max(0, total)),
+  };
 }
 
 function confidenceScore(player: FplElement, fixtureCount: number, startProbability: number) {
@@ -577,38 +738,94 @@ export function projectPlayer(
   expectedMinutesOverride?: ExpectedMinutesProjection,
   matchForecasts?: Map<number, MatchForecastProjection>,
   pointsForecasts?: PlayerPointsProjection[],
+  context?: ProjectionContext,
 ): PlayerProjection {
   const position = POSITION_BY_ID[numeric(player.element_type)] || "MID";
   const teamId = numeric(player.team);
+  const playerId = numeric(player.id);
   const upcoming = fixturesForTeam(teamId, fixtures, teams, nextEvent, matchForecasts);
-  const expectedMinutes =
+  const baseMinutes =
     expectedMinutesOverride ??
     projectExpectedMinutes(player, nextEvent === 1 ? 38 : nextEvent - 1);
-  const baseline = baselinePoints(player, position, nextEvent === 1);
-  const roleFactor = 0.36 + (expectedMinutes.expectedMinutes / 90) * 0.64;
-  const fixturePoints = upcoming.map((fixture, index) => {
-    const attackFactor = fixture.teamExpectedGoals === undefined
-      ? undefined
-      : clamp(fixture.teamExpectedGoals / 1.45, 0.72, 1.35);
-    const defenceFactor = fixture.cleanSheetProbability === undefined
-      ? undefined
-      : clamp(0.78 + fixture.cleanSheetProbability * 0.5, 0.78, 1.28);
-    const structuralFactor =
-      attackFactor === undefined || defenceFactor === undefined
-        ? undefined
-        : position === "GK"
-          ? defenceFactor
-          : position === "DEF"
-            ? attackFactor * 0.25 + defenceFactor * 0.75
-            : position === "MID"
-              ? attackFactor * 0.85 + defenceFactor * 0.15
-              : attackFactor;
-    const difficultyFactor = structuralFactor ?? FIXTURE_MULTIPLIER[fixture.difficulty] ?? 1;
-    const homeFactor = fixture.venue === "H" ? 1.035 : 0.965;
-    const horizonDiscount = 1 - index * 0.025;
-    return round(clamp(baseline * roleFactor * difficultyFactor * homeFactor * horizonDiscount, 0.2, 14));
+
+  const scoring = context?.scoring ?? FALLBACK_SCORING_RULES;
+  const rates =
+    context?.ratesByPlayer.get(playerId)
+    ?? estimatePlayerRates(player as unknown as RateSource, position);
+  const teamStrengths = context?.teamStrengths ?? new Map<number, TeamStrength>();
+  const strength = teamStrengths.get(teamId);
+
+  // Neutral-fixture expectation for this side, used to separate the fixture
+  // effect from the team quality already embedded in the player's own rates.
+  const teamBaselineExpectedGoals =
+    LEAGUE_GOALS_PER_TEAM * (strength?.attackStrength ?? 1);
+  const teamBaselineExpectedGoalsConceded =
+    LEAGUE_GOALS_PER_TEAM * (strength?.defenceWeakness ?? 1);
+
+  const observedMinutes = numeric(player.minutes);
+  const bpsPer90 = observedMinutes > 0
+    ? (numeric(player.bps) * 90) / observedMinutes
+    : 0;
+
+  // Workload is a minutes effect, so it is applied per Gameweek before the
+  // scoring components are evaluated.
+  const impact = workloadImpact(
+    player.region === null || player.region === undefined ? null : numeric(player.region),
+    nextEvent,
+    context?.workload,
+  );
+  const expectedMinutes = impact ? applyWorkload(baseMinutes, impact) : baseMinutes;
+
+  // A stored match forecast from the trained team model is a better estimate
+  // than the squad-derived one, so it takes precedence where it exists. Its
+  // clean-sheet probability is the zero-goal mass of the same Poisson, so the
+  // implied goals against invert exactly.
+  const fixtureExpectations = upcoming.map((fixture): FixtureExpectation => {
+    if (
+      fixture.teamExpectedGoals !== undefined
+      && fixture.cleanSheetProbability !== undefined
+    ) {
+      return {
+        expectedGoalsFor: fixture.teamExpectedGoals,
+        expectedGoalsAgainst: -Math.log(clamp(fixture.cleanSheetProbability, 0.005, 0.995)),
+        cleanSheetProbability: fixture.cleanSheetProbability,
+      };
+    }
+    return expectFixture(
+      teamStrengths,
+      teamId,
+      fixture.opponentId,
+      fixture.venue === "H",
+      fixture.difficulty,
+    );
   });
-  const fallback = round(clamp(baseline * roleFactor, 0.2, 12));
+
+  const breakdowns = upcoming.map((fixture, index) => {
+    const gameweekMinutes = index === 0
+      ? expectedMinutes
+      : (() => {
+          const laterImpact = workloadImpact(
+            player.region === null || player.region === undefined
+              ? null
+              : numeric(player.region),
+            fixture.event,
+            context?.workload,
+          );
+          return laterImpact ? applyWorkload(baseMinutes, laterImpact) : baseMinutes;
+        })();
+    return projectFixturePoints(
+      position,
+      rates,
+      gameweekMinutes,
+      fixtureExpectations[index],
+      teamBaselineExpectedGoals,
+      teamBaselineExpectedGoalsConceded,
+      bpsPer90,
+      scoring,
+    );
+  });
+
+  const fixturePoints = breakdowns.map((breakdown) => round(breakdown.total));
   const simulatedByFixture = new Map(
     (pointsForecasts ?? []).map((forecast) => [forecast.fixtureId, forecast]),
   );
@@ -617,9 +834,10 @@ export function projectPlayer(
   );
   const usesSimulation = simulatedPoints.some((score) => score !== undefined);
   const blendedPoints = fixturePoints.map((score, index) => simulatedPoints[index] ?? score);
-  const xp1 = round(blendedPoints[0] ?? fallback);
-  const xp3 = round(blendedPoints.length ? blendedPoints.reduce((sum, score) => sum + score, 0) : fallback * 2.75);
+  const xp1 = round(blendedPoints[0] ?? 0);
+  const xp3 = round(blendedPoints.reduce((sum, score) => sum + score, 0));
   const firstFixture = upcoming[0];
+  const firstExpectation = fixtureExpectations[0];
   const confidence = confidenceScore(player, upcoming.length, expectedMinutes.startProbability);
   const availability = playerAvailability(player) * 100;
 
@@ -642,11 +860,20 @@ export function projectPlayer(
     fixtures: upcoming.map((fixture) => `${fixture.opponent} (${fixture.venue})`),
     breakdown: usesSimulation ? blendedPoints.map(round) : fixturePoints,
     expectedMinutes,
-    teamExpectedGoals: firstFixture?.teamExpectedGoals,
-    cleanSheetProbability: firstFixture?.cleanSheetProbability,
+    teamExpectedGoals: firstFixture?.teamExpectedGoals ?? firstExpectation?.expectedGoalsFor,
+    teamExpectedGoalsConceded: firstExpectation?.expectedGoalsAgainst,
+    cleanSheetProbability:
+      firstFixture?.cleanSheetProbability ?? firstExpectation?.cleanSheetProbability,
     pointsDistribution: firstFixture
       ? simulatedByFixture.get(firstFixture.fixtureId)
       : undefined,
+    pointsBreakdown: breakdowns[0],
+    rates: {
+      expectedGoals: Number(rates.expectedGoals.toFixed(3)),
+      expectedAssists: Number(rates.expectedAssists.toFixed(3)),
+      defensiveActions: Number(rates.defensiveActions.toFixed(2)),
+      observationWeight: rates.observationWeight,
+    },
   };
 }
 

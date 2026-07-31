@@ -16,7 +16,26 @@ export type ExpectedMinutesProjection = {
     | "expected-minutes-baseline-v1"
     | "expected-minutes-v2-linear-1"
     | "expected-minutes-team-opportunity-v1"
-    | "expected-minutes-team-lineup-v1";
+    | "expected-minutes-team-lineup-v1"
+    | "expected-minutes-workload-v1";
+};
+
+/**
+ * Expected points decomposed into the FPL scoring events that produce them.
+ * Components sum to `total` and are each expressed in points, so the UI can
+ * show a manager exactly where a projection comes from.
+ */
+export type PointsBreakdown = {
+  appearance: number;
+  goals: number;
+  assists: number;
+  cleanSheet: number;
+  goalsConceded: number;
+  saves: number;
+  defensiveContribution: number;
+  bonus: number;
+  cards: number;
+  total: number;
 };
 
 export type PlayerProjection = {
@@ -39,8 +58,18 @@ export type PlayerProjection = {
   breakdown: number[];
   expectedMinutes: ExpectedMinutesProjection;
   teamExpectedGoals?: number;
+  teamExpectedGoalsConceded?: number;
   cleanSheetProbability?: number;
   pointsDistribution?: PlayerPointsProjection;
+  /** Component decomposition of the next-Gameweek projection. */
+  pointsBreakdown?: PointsBreakdown;
+  /** Per-90 rates behind the projection, after shrinkage. */
+  rates?: {
+    expectedGoals: number;
+    expectedAssists: number;
+    defensiveActions: number;
+    observationWeight: number;
+  };
 };
 
 export type PlayerPointsProjection = {
@@ -119,12 +148,19 @@ export type FplProjectionResponse = {
   players: PlayerProjection[];
   source: "official-fpl";
   model: {
-    version: "fixture-blend-v4";
+    version: "component-xp-v1";
     baseline: true;
     horizon: 3;
     playerCount: number;
     features: string[];
     expectedMinutesVersion: ExpectedMinutesProjection["modelVersion"];
+    /** Where the per-event point values came from. */
+    scoringRulesVersion?: string;
+    scoringRulesSource?: "live-game-config" | "static-fallback";
+    rateModelVersion?: string;
+    teamStrengthVersion?: string;
+    workloadVersion?: string;
+    workloadAdjustedCount?: number;
     teamOpportunityAdjustedCount?: number;
     teamLineupAdjustedCount?: number;
     backtest?: BacktestSummary;

@@ -1,9 +1,17 @@
 import type { FplProjectionResponse } from "../../../lib/contracts/fpl";
-import { projectExpectedMinutesForSquad, projectPlayer, validateProjectionData } from "../../../lib/fpl-model";
+import {
+  buildProjectionContext,
+  projectExpectedMinutesForSquad,
+  projectPlayer,
+  validateProjectionData,
+} from "../../../lib/fpl-model";
 import {
   OfficialFplProvider,
   StoredFplProvider,
 } from "../../../lib/providers/fpl-provider";
+import { RATE_MODEL_VERSION } from "../../../lib/player-rates";
+import { TEAM_STRENGTH_MODEL_VERSION } from "../../../lib/team-strength";
+import { WORKLOAD_MODEL_VERSION } from "../../../lib/workload";
 
 function createProvider() {
   const dataApiUrl = process.env.FPL_DATA_API_URL;
@@ -24,6 +32,11 @@ export async function GET() {
       nextEvent === 1 ? 38 : nextEvent - 1,
       snapshot.expectedMinutesByPlayer,
     );
+    const context = buildProjectionContext(
+      snapshot.elements,
+      expectedMinutesByPlayer,
+      snapshot.scoringConfig,
+    );
     const players = snapshot.elements
       .map((player) =>
         projectPlayer(
@@ -34,6 +47,7 @@ export async function GET() {
           expectedMinutesByPlayer.get(Number(player.id)),
           snapshot.matchForecastsByFixture,
           snapshot.pointsForecastsByPlayer?.get(Number(player.id)),
+          context,
         ),
       )
       .sort((a, b) => b.xp3 - a.xp3);
@@ -44,11 +58,30 @@ export async function GET() {
       players,
       source: "official-fpl",
       model: {
-        version: "fixture-blend-v4",
+        version: "component-xp-v1",
         baseline: true,
         horizon: 3,
         playerCount: players.length,
-        features: ["official xP", "prior-season points per game", "sample reliability", "form", "xG/xA", "expected minutes", "availability", "fixture difficulty", "venue"],
+        features: [
+          "additive FPL scoring components",
+          "shrunk per-90 xG/xA rates",
+          "squad-derived team attack and defence",
+          "Poisson clean sheets and goals conceded",
+          "defensive-contribution threshold probability",
+          "BPS-implied bonus",
+          "expected minutes",
+          "international workload",
+          "availability",
+          "venue",
+        ],
+        scoringRulesVersion: context.scoring.version,
+        scoringRulesSource: context.scoring.source,
+        rateModelVersion: RATE_MODEL_VERSION,
+        teamStrengthVersion: TEAM_STRENGTH_MODEL_VERSION,
+        workloadVersion: WORKLOAD_MODEL_VERSION,
+        workloadAdjustedCount: players.filter(
+          (player) => player.expectedMinutes.modelVersion === "expected-minutes-workload-v1",
+        ).length,
         expectedMinutesVersion:
           players.some((player) => player.expectedMinutes.modelVersion === "expected-minutes-team-lineup-v1")
             ? "expected-minutes-team-lineup-v1"

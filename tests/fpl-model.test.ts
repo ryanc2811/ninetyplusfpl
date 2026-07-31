@@ -77,19 +77,74 @@ test("preseason projections retain reliability-weighted prior-season performance
   ];
   const teams = new Map([[1, "AAA"], [2, "BBB"]]);
   const strongHistory = projectPlayer(
-    player({ points_per_game: "6.5", ep_next: "4.0", minutes: 2_900 }),
+    player({ expected_goals_per_90: "0.75", expected_assists_per_90: "0.30", minutes: 2_900 }),
     gameweekOneFixtures,
     teams,
     1,
   );
   const weakHistory = projectPlayer(
-    player({ points_per_game: "2.0", ep_next: "4.0", minutes: 2_900 }),
+    player({ expected_goals_per_90: "0.10", expected_assists_per_90: "0.05", minutes: 2_900 }),
     gameweekOneFixtures,
     teams,
     1,
   );
 
   assert.ok(strongHistory.xp1 > weakHistory.xp1 + 1.5);
+});
+
+test("a short minutes sample is shrunk toward the position prior", () => {
+  const gameweekOneFixtures: FplFixture[] = [
+    {
+      id: 100,
+      event: 1,
+      team_h: 1,
+      team_a: 2,
+      team_h_difficulty: 3,
+      team_a_difficulty: 3,
+      kickoff_time: "2026-08-15T14:00:00Z",
+      finished: false,
+    },
+  ];
+  const teams = new Map([[1, "AAA"], [2, "BBB"]]);
+  const hotStreak = { expected_goals_per_90: "1.20", expected_assists_per_90: "0.40" };
+  const establishedSample = projectPlayer(
+    player({ ...hotStreak, minutes: 2_900 }),
+    gameweekOneFixtures,
+    teams,
+    1,
+  );
+  const thinSample = projectPlayer(
+    player({ ...hotStreak, minutes: 180 }),
+    gameweekOneFixtures,
+    teams,
+    1,
+  );
+
+  // The same headline rate must not carry the same weight off 180 minutes.
+  assert.ok(thinSample.xp1 < establishedSample.xp1);
+  assert.ok((thinSample.rates?.expectedGoals ?? 0) < (establishedSample.rates?.expectedGoals ?? 0));
+});
+
+test("points per game is not an input; underlying rates are", () => {
+  const gameweekOneFixtures: FplFixture[] = [
+    {
+      id: 100,
+      event: 1,
+      team_h: 1,
+      team_a: 2,
+      team_h_difficulty: 3,
+      team_a_difficulty: 3,
+      kickoff_time: "2026-08-15T14:00:00Z",
+      finished: false,
+    },
+  ];
+  const teams = new Map([[1, "AAA"], [2, "BBB"]]);
+  const high = projectPlayer(player({ points_per_game: "7.5" }), gameweekOneFixtures, teams, 1);
+  const low = projectPlayer(player({ points_per_game: "1.0" }), gameweekOneFixtures, teams, 1);
+
+  // Points per game is a consequence of the underlying rates, not independent
+  // evidence, so holding those rates fixed must hold the projection fixed.
+  assert.equal(high.xp1, low.xp1);
 });
 
 test("an unavailable starter transfers team opportunity to likely replacements", () => {

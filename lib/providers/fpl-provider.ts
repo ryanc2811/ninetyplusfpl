@@ -6,6 +6,7 @@ import type {
   PlayerPointsProjection,
   ProjectionProvenance,
 } from "../contracts/fpl";
+import type { RawScoringConfig } from "../scoring-rules.ts";
 
 const BOOTSTRAP_URL = "https://fantasy.premierleague.com/api/bootstrap-static/";
 const FIXTURES_URL = "https://fantasy.premierleague.com/api/fixtures/";
@@ -21,6 +22,8 @@ export type FplSourceSnapshot = {
   teams: Team[];
   events: FplEvent[];
   fixtures: FplFixture[];
+  /** Live per-event point values from `game_config.scoring`, when published. */
+  scoringConfig?: RawScoringConfig | null;
   provenance: ProjectionProvenance;
   expectedMinutesByPlayer?: Map<number, ExpectedMinutesProjection>;
   backtest?: BacktestSummary;
@@ -36,6 +39,7 @@ type BootstrapPayload = {
   elements: FplElement[];
   teams: Team[];
   events: FplEvent[];
+  game_config?: { scoring?: RawScoringConfig } | null;
 };
 
 type StoredSnapshotExport = {
@@ -143,6 +147,7 @@ export class OfficialFplProvider implements FplDataProvider {
     return {
       ...bootstrapResult.data,
       fixtures: fixtureResult.data,
+      scoringConfig: bootstrapResult.data.game_config?.scoring ?? null,
       provenance: {
         source: "Fantasy Premier League public web data",
         retrievedAt,
@@ -292,6 +297,7 @@ export class StoredFplProvider implements FplDataProvider {
     return {
       ...snapshot.bootstrap,
       fixtures: snapshot.fixtures,
+      scoringConfig: snapshot.bootstrap.game_config?.scoring ?? null,
       provenance: snapshot.provenance,
       expectedMinutesByPlayer,
       backtest: storedBacktest

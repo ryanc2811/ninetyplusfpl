@@ -6,6 +6,7 @@ import type {
   ExpectedMinutesProjection,
   FplProjectionResponse,
   PlayerPointsProjection,
+  PointsBreakdown,
 } from "../lib/contracts/fpl";
 import { createChipPlan, managerChoicesFromPlan, squadStrategyForGameweek, validateChipPlan, type ChipPlanItem } from "../lib/chip-strategy";
 import { FORMATIONS, optimiseSquad, pitchLayout, projectedStrategyPoints, replaceSquadPlayer, replacementError, resolveCaptaincy, selectBestLineup, selectLineup, swapLineupPlayer, validateLineup, validateSquad, type Formation, type SquadAsset } from "../lib/squad-builder";
@@ -32,9 +33,29 @@ type Player = {
   breakdown?: number[];
   expectedMinutes?: ExpectedMinutesProjection;
   teamExpectedGoals?: number;
+  teamExpectedGoalsConceded?: number;
   cleanSheetProbability?: number;
   pointsDistribution?: PlayerPointsProjection;
+  pointsBreakdown?: PointsBreakdown;
+  rates?: {
+    expectedGoals: number;
+    expectedAssists: number;
+    defensiveActions: number;
+    observationWeight: number;
+  };
 };
+
+const BREAKDOWN_LABELS: Array<[keyof PointsBreakdown, string]> = [
+  ["appearance", "Appearance"],
+  ["goals", "Goals"],
+  ["assists", "Assists"],
+  ["cleanSheet", "Clean sheet"],
+  ["defensiveContribution", "Def. contribution"],
+  ["saves", "Saves"],
+  ["bonus", "Bonus"],
+  ["goalsConceded", "Goals conceded"],
+  ["cards", "Cards"],
+];
 
 const fallbackPlayers: Player[] = [
   { id: 1, name: "Haaland", team: "MCI", opponent: "BHA", venue: "H", position: "FWD", price: 15.5, xp1: 8.4, xp3: 23.7, form: 8.1, minutes: 89, ownership: 61.8, risk: "Low", trend: 0.8, tag: "Captain" },
@@ -154,7 +175,7 @@ export default function Home() {
             );
           }
           setLive(true);
-          setModelVersion(data.model?.version || "fixture-blend-v2");
+          setModelVersion(data.model?.version || "component-xp-v1");
           setExpectedMinutesVersion(
             data.model?.expectedMinutesVersion || "expected-minutes-baseline-v1",
           );
@@ -771,6 +792,39 @@ export default function Home() {
                               {player.cleanSheetProbability !== undefined && <div><span>Clean-sheet chance</span><b>{Math.round(player.cleanSheetProbability * 100)}%</b></div>}
                               {player.pointsDistribution && <><div><span>Floor · median · ceiling</span><b>{player.pointsDistribution.p10Points.toFixed(0)} · {player.pointsDistribution.medianPoints.toFixed(0)} · {player.pointsDistribution.p90Points.toFixed(0)}</b></div><div><span>5+ / 10+ points</span><b>{Math.round(player.pointsDistribution.fivePlusProbability * 100)}% / {Math.round(player.pointsDistribution.tenPlusProbability * 100)}%</b></div><div><span>Goal / assist</span><b>{Math.round(player.pointsDistribution.goalProbability * 100)}% / {Math.round(player.pointsDistribution.assistProbability * 100)}%</b></div><div><span>Bonus potential</span><b>{Math.round(player.pointsDistribution.bonusProbability * 100)}%</b></div><div><span>Defensive contribution</span><b>{Math.round(player.pointsDistribution.defensiveContributionProbability * 100)}%</b></div></>}
                             </div>
+                            {player.pointsBreakdown && (
+                              <div className="breakdown-block">
+                                <span className="eyebrow">WHERE THE POINTS COME FROM</span>
+                                <div className="breakdown-bar">
+                                  {BREAKDOWN_LABELS.filter(([key]) => player.pointsBreakdown![key] > 0).map(([key, label]) => (
+                                    <i
+                                      key={key}
+                                      className={`seg-${key}`}
+                                      style={{ width: `${(player.pointsBreakdown![key] / Math.max(0.01, player.pointsBreakdown!.total)) * 100}%` }}
+                                      title={`${label}: ${player.pointsBreakdown![key].toFixed(2)} pts`}
+                                    />
+                                  ))}
+                                </div>
+                                <div className="breakdown-list">
+                                  {BREAKDOWN_LABELS.filter(([key]) => Math.abs(player.pointsBreakdown![key]) >= 0.01).map(([key, label]) => (
+                                    <div key={key}>
+                                      <span>{label}</span>
+                                      <b className={player.pointsBreakdown![key] < 0 ? "negative" : undefined}>
+                                        {player.pointsBreakdown![key] > 0 ? "+" : ""}{player.pointsBreakdown![key].toFixed(2)}
+                                      </b>
+                                    </div>
+                                  ))}
+                                  <div className="breakdown-total"><span>Projected</span><b>{player.pointsBreakdown.total.toFixed(2)}</b></div>
+                                </div>
+                                {player.rates && (
+                                  <p className="model-note">
+                                    Built from {player.rates.expectedGoals.toFixed(2)} xG and {player.rates.expectedAssists.toFixed(2)} xA per 90
+                                    {player.rates.defensiveActions > 0 ? `, ${player.rates.defensiveActions.toFixed(1)} defensive actions per 90` : ""}
+                                    {" · "}{Math.round(player.rates.observationWeight * 100)}% observed, {Math.round((1 - player.rates.observationWeight) * 100)}% position prior
+                                  </p>
+                                )}
+                              </div>
+                            )}
                             <div className="evidence-grid">
                               <div><span className="eyebrow">STRUCTURED EVIDENCE</span>{(player.pointsDistribution?.reasons ?? player.expectedMinutes.reasons).map((reason) => <p key={reason}>✓ {reason}</p>)}</div>
                               <div><span className="eyebrow">NEXT FIXTURES</span><p>{player.fixtures?.join(" · ") || "Fixture data pending"}</p><p>Minutes confidence: {player.expectedMinutes.confidence}%</p></div>
