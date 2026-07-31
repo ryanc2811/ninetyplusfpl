@@ -7,7 +7,7 @@ const mono = Geist_Mono({ variable: "--font-mono", subsets: ["latin"] });
 const editorial = Instrument_Serif({ variable: "--font-editorial", subsets: ["latin"], weight: "400" });
 
 export const metadata: Metadata = {
-  title: "NINETY+ — FPL AI Decision Engine",
+  title: "NINETY+ - FPL AI Decision Engine",
   description: "Rules-aware squad optimisation, player projections, transfer paths and chip strategy for the 2026/27 Fantasy Premier League season.",
   metadataBase: new URL("https://ninety-plus.sites.openai.com"),
   openGraph: {
