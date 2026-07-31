@@ -151,9 +151,58 @@ button { color: inherit; }
 .strategy-apply:disabled { opacity: .45; cursor: not-allowed; }
 .dna-row { display: grid; grid-template-columns: 1fr 80px 22px; align-items: center; gap: 8px; font-size: 8px; padding: 9px 0; }.dna-row i { height: 3px; background: #e3e8e1; }.dna-row i b { display: block; height: 100%; background: var(--green); }.dna-row em { font-style: normal; color: var(--green); font-weight: 800; }
 
+/* Leagues */
+.connect-panel { max-width: 640px; margin: 40px auto; }
+.connect-panel h2 { font-family: var(--font-editorial), Georgia, serif; font-size: 26px; font-weight: 400; margin: 6px 0 12px; }
+.connect-panel code { font-family: var(--font-mono); font-size: 9px; background: #edf1eb; padding: 2px 5px; border-radius: 3px; }
+.connect-form { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin: 18px 0 10px; }
+.connect-form .picker-search input { height: 40px; font-size: 11px; }
+.connect-form .primary-button:disabled { opacity: .55; cursor: default; }
+.league-strip { grid-template-columns: 110px 1fr auto; }
+.league-strip p b { color: #fff; }
+.league-layout { display: grid; grid-template-columns: minmax(210px, .28fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+.league-main { display: grid; gap: 12px; min-width: 0; }
+.league-list { display: grid; gap: 14px; align-content: start; position: sticky; top: 108px; max-height: calc(100vh - 128px); overflow-y: auto; }
+.league-group { display: grid; gap: 3px; }
+.league-group > small { color: var(--muted); font-family: var(--font-mono); font-size: 7px; letter-spacing: .8px; margin-bottom: 3px; }
+.league-item { display: grid; gap: 2px; text-align: left; border: 1px solid transparent; background: transparent; border-radius: 6px; padding: 8px 9px; cursor: pointer; }
+.league-item:hover { background: #f1f5ed; }
+.league-item.active { background: var(--ink); border-color: var(--ink); }
+.league-item b { font-size: 10px; }.league-item small { color: var(--muted); font-size: 7px; }
+.league-item.active b { color: #fff; }.league-item.active small { color: var(--lime); }
+.preseason-note { background: #eef3e9; border-left: 2px solid var(--lime); padding: 14px 16px; border-radius: 0 6px 6px 0; }
+.preseason-note b { font-size: 11px; }.preseason-note p { color: var(--muted); font-size: 9px; margin: 6px 0 0; line-height: 1.5; }
+.badge-slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 8px; margin-top: 14px; }
+.badge-slot { border: 1px dashed #c8d3c6; border-radius: 6px; padding: 12px 8px; display: grid; justify-items: center; gap: 2px; opacity: .6; }
+.badge-slot i { font-style: normal; font-size: 17px; color: #b3c0b2; }
+.badge-slot b { font-size: 9px; }.badge-slot small { font-size: 7px; color: var(--muted); font-family: var(--font-mono); }
+.badge-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)); gap: 10px; }
+.badge-card { background: var(--ink); color: #e9f3ec; border-radius: 8px; padding: 16px 14px; display: grid; justify-items: center; gap: 3px; text-align: center; position: relative; overflow: hidden; }
+.badge-card i { font-style: normal; font-size: 26px; color: var(--lime); line-height: 1; }
+.badge-month { font-family: var(--font-mono); font-size: 8px; letter-spacing: 1.2px; color: var(--lime); margin-top: 4px; }
+.badge-card b { font-size: 12px; color: #fff; }
+.badge-card small { font-size: 8px; color: #8fa398; }
+.badge-card strong { font-family: var(--font-editorial), Georgia, serif; font-size: 22px; font-weight: 400; color: var(--lime); margin-top: 4px; }
+.badge-card p { font-size: 7px; color: #7f938a; margin: 4px 0 0; line-height: 1.45; }
+.season-badge-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
+.season-badge { display: grid; grid-template-columns: 30px 1fr; gap: 9px; align-items: start; border: 1px solid var(--line); border-radius: 6px; padding: 11px; }
+.season-badge i { font-style: normal; width: 28px; height: 28px; border-radius: 50%; background: #edf2e9; color: var(--green); display: grid; place-items: center; font-size: 12px; }
+.season-badge b { font-size: 10px; display: block; }
+.season-badge small { font-size: 8px; color: var(--green); display: block; margin-top: 2px; }
+.season-badge p { font-size: 7px; color: var(--muted); margin: 4px 0 0; line-height: 1.4; }
+.month-table { border-top: 1px solid var(--line); overflow-x: auto; }
+.month-row { min-width: 520px; display: grid; grid-template-columns: 34px minmax(140px, 1.6fr) .6fr .6fr .6fr .6fr; align-items: center; gap: 8px; padding: 10px 4px; border-bottom: 1px solid #e8ece6; font-size: 9px; }
+.month-row.manager-row { grid-template-columns: minmax(140px, 1.6fr) .55fr .55fr .55fr .55fr .55fr .7fr; }
+.month-row.month-head { background: #edf1eb; color: var(--muted); font-family: var(--font-mono); font-size: 7px; border-bottom: 0; }
+.month-row b { font-size: 10px; display: block; }
+.month-row small { font-size: 7px; color: var(--muted); display: block; margin-top: 2px; }
+.month-row.leading { background: #f2f7ed; box-shadow: inset 2px 0 var(--lime); }
+.month-row.leading > span:first-child { color: var(--lime); font-size: 13px; }
+.month-net { font-family: var(--font-editorial), Georgia, serif; font-size: 15px; color: var(--green); }
+
 @media (max-width: 1050px) {
-  .shell { grid-template-columns: 72px minmax(0,1fr); }.sidebar { padding-inline: 10px; }.brand { font-size: 16px; padding-inline: 7px; }.season, .nav-item:not(.active) { font-size: 0; }.nav-item { justify-content: center; padding: 11px 7px; }.nav-item span { width: auto; }.model-status div, .team-card > span:not(.avatar), .team-card i { display: none; }.team-card { display: flex; justify-content: center; }.metric-grid { grid-template-columns: 1fr 1fr; }.dashboard-grid, .split-view, .strategy-grid { grid-template-columns: 1fr; }
+  .shell { grid-template-columns: 72px minmax(0,1fr); }.sidebar { padding-inline: 10px; }.brand { font-size: 16px; padding-inline: 7px; }.season, .nav-item:not(.active) { font-size: 0; }.nav-item { justify-content: center; padding: 11px 7px; }.nav-item span { width: auto; }.model-status div, .team-card > span:not(.avatar), .team-card i { display: none; }.team-card { display: flex; justify-content: center; }.metric-grid { grid-template-columns: 1fr 1fr; }.dashboard-grid, .split-view, .strategy-grid, .league-layout { grid-template-columns: 1fr; }.league-list { position: static; max-height: none; }
 }
 @media (max-width: 720px) {
-  .shell { display: block; }.sidebar { height: 60px; position: fixed; z-index: 50; left: 0; right: 0; top: auto; bottom: 0; padding: 8px 12px; flex-direction: row; align-items: center; }.brand, .season, .sidebar-bottom { display: none; }.sidebar nav { width: 100%; grid-template-columns: repeat(4,1fr); }.nav-item, .nav-item:not(.active) { font-size: 0; }.nav-item span { font-size: 18px; }.topbar { height: 74px; padding: 0 16px; }.topbar h1 { font-size: 24px; }.topbar .eyebrow { display: none; }.icon-button { display: none; }.primary-button { padding: 10px; }.content { padding: 16px 12px 84px; }.signal-strip { grid-template-columns: 1fr; gap: 5px; }.signal-strip button { text-align: left; }.metric-grid { grid-template-columns: 1fr 1fr; }.metric { min-height: 125px; }.metric-value { font-size: 28px; }.dashboard-grid, .lower-grid { grid-template-columns: 1fr; }.pitch { height: 420px; }.bench-row { grid-template-columns: 1fr 1fr; }.bench-row > span { display: none; }.fixture-row { grid-template-columns: 40px 1fr; }.fixtures, .fixture-score { margin-top: 5px; }.lab-toolbar { flex-wrap: wrap; }.search { width: 100%; }.segmented { flex: 1; justify-content: center; }.builder-pitch { height: 540px; }.budget-bar { grid-template-columns: 1fr 1fr; }.budget-bar div:nth-child(-n+3) { border-top: 1px solid var(--line); }.budget-bar div:nth-child(-n+2) { border-top: 0; }.budget-bar div:nth-child(3n+1) { border-left: 1px solid var(--line); }.budget-bar div:nth-child(2n+1) { border-left: 0; }.strategy-hero p { width: 100%; }.chip-option { grid-template-columns: 34px minmax(0,1fr) 100px; }.chip-option > strong { display: none; }.chip-half-head { align-items: flex-start; }.chip-half-head > small { max-width: 120px; text-align: right; }.table-summary { align-items: flex-start; gap: 12px; }.data-health { flex-direction: column; gap: 5px; }.player-explanation { padding-left: 14px; }.probability-grid { grid-template-columns: repeat(2, 1fr); }.evidence-grid { grid-template-columns: 1fr; }
+  .shell { display: block; }.sidebar { height: 60px; position: fixed; z-index: 50; left: 0; right: 0; top: auto; bottom: 0; padding: 8px 12px; flex-direction: row; align-items: center; }.brand, .season, .sidebar-bottom { display: none; }.sidebar nav { width: 100%; grid-template-columns: repeat(5,1fr); }.nav-item, .nav-item:not(.active) { font-size: 0; }.nav-item span { font-size: 18px; }.topbar { height: 74px; padding: 0 16px; }.topbar h1 { font-size: 24px; }.topbar .eyebrow { display: none; }.icon-button { display: none; }.primary-button { padding: 10px; }.content { padding: 16px 12px 84px; }.signal-strip { grid-template-columns: 1fr; gap: 5px; }.signal-strip button { text-align: left; }.metric-grid { grid-template-columns: 1fr 1fr; }.metric { min-height: 125px; }.metric-value { font-size: 28px; }.dashboard-grid, .lower-grid { grid-template-columns: 1fr; }.pitch { height: 420px; }.bench-row { grid-template-columns: 1fr 1fr; }.bench-row > span { display: none; }.fixture-row { grid-template-columns: 40px 1fr; }.fixtures, .fixture-score { margin-top: 5px; }.lab-toolbar { flex-wrap: wrap; }.search { width: 100%; }.segmented { flex: 1; justify-content: center; }.builder-pitch { height: 540px; }.budget-bar { grid-template-columns: 1fr 1fr; }.budget-bar div:nth-child(-n+3) { border-top: 1px solid var(--line); }.budget-bar div:nth-child(-n+2) { border-top: 0; }.budget-bar div:nth-child(3n+1) { border-left: 1px solid var(--line); }.budget-bar div:nth-child(2n+1) { border-left: 0; }.strategy-hero p { width: 100%; }.chip-option { grid-template-columns: 34px minmax(0,1fr) 100px; }.chip-option > strong { display: none; }.chip-half-head { align-items: flex-start; }.chip-half-head > small { max-width: 120px; text-align: right; }.table-summary { align-items: flex-start; gap: 12px; }.data-health { flex-direction: column; gap: 5px; }.player-explanation { padding-left: 14px; }.probability-grid { grid-template-columns: repeat(2, 1fr); }.evidence-grid { grid-template-columns: 1fr; }
 }
