@@ -37,6 +37,8 @@ export async function GET() {
       snapshot.elements,
       expectedMinutesByPlayer,
       snapshot.scoringConfig,
+      undefined,
+      new Map(snapshot.teams.map((team) => [team.id, team.name ?? team.short_name])),
     );
     const players = snapshot.elements
       .map((player) =>

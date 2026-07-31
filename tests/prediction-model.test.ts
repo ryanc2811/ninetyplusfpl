@@ -160,26 +160,120 @@ test("league-average inputs produce roughly league-average goals", () => {
 
 const testWorkload: TournamentWorkload = {
   tournament: "Test Cup",
+  reportDate: "2026-07-31",
   firstGameweek: 1,
   lastGameweek: 4,
-  signals: [
-    { regionId: 241, nation: "England", stage: "finalist", confidence: 0.6, source: "test" },
-    { regionId: 99, nation: "Groupland", stage: "group", confidence: 0.6, source: "test" },
+  records: [
+    {
+      player: "Heavy Legs", club: "Arsenal", position: "MID", minutes: 660,
+      injury: "No confirmed injury reported", riskScore: 8, riskTier: "HIGH",
+      turnaroundDays: 34, projection: "Managed minutes risk",
+    },
+    {
+      player: "Fresh Squad", club: "Arsenal", position: "GK", minutes: 0,
+      injury: "No confirmed injury reported", riskScore: 2, riskTier: "LOW",
+      turnaroundDays: 33, projection: "Likely starter",
+    },
+    {
+      player: "Broken Back", club: "Chelsea", position: "DEF", minutes: 480,
+      injury: "Out — extended rehabilitation", riskScore: 10, riskTier: "CRITICAL",
+      turnaroundDays: 38, projection: "Out for GW1",
+    },
+  ],
+  injuries: [
+    { player: "Torn Hamstring", club: "Liverpool", issue: "Hamstring", status: "Expected to miss GW1" },
   ],
 };
 
+const identify = (fullName: string, webName: string, club: string) =>
+  ({ fullName, webName, club });
+
 test("workload impact decays across the opening gameweeks", () => {
-  const first = workloadImpact(241, 1, testWorkload)!;
-  const second = workloadImpact(241, 2, testWorkload)!;
+  const id = identify("Heavy Legs", "Legs", "Arsenal");
+  const first = workloadImpact(id, 1, testWorkload)!;
+  const second = workloadImpact(id, 2, testWorkload)!;
   assert.ok(first.startProbabilityMultiplier < second.startProbabilityMultiplier);
   assert.ok(second.startProbabilityMultiplier < 1);
-  assert.equal(workloadImpact(241, 9, testWorkload), null);
+  assert.equal(workloadImpact(id, 9, testWorkload), null);
 });
 
-test("nations without a deep run or without an entry are untouched", () => {
-  assert.equal(workloadImpact(99, 1, testWorkload), null);
-  assert.equal(workloadImpact(500, 1, testWorkload), null);
+test("a low-load squad member is not penalised for being selected", () => {
+  // Zero tournament minutes must not be treated the same as a heavy starter.
+  assert.equal(workloadImpact(identify("Fresh Squad", "Squad", "Arsenal"), 1, testWorkload), null);
+});
+
+test("players absent from the dataset are untouched", () => {
+  assert.equal(workloadImpact(identify("Nobody Here", "Here", "Everton"), 1, testWorkload), null);
   assert.equal(workloadImpact(null, 1, testWorkload), null);
+});
+
+test("a reported injury caps availability and overrides fatigue", () => {
+  const impact = workloadImpact(identify("Broken Back", "Back", "Chelsea"), 1, testWorkload)!;
+  assert.equal(impact.availabilityCeiling, 0);
+  // Fatigue must not also be applied on top of a medical ceiling.
+  assert.equal(impact.startProbabilityMultiplier, 1);
+});
+
+test("a non-tournament injury is matched from the injury list", () => {
+  const impact = workloadImpact(identify("Torn Hamstring", "Hamstring", "Liverpool"), 1, testWorkload)!;
+  assert.equal(impact.availabilityCeiling, 0);
+});
+
+test("surnames are matched within the correct club only", () => {
+  // "Legs" is unique in this dataset, so it matches on surname alone.
+  assert.ok(workloadImpact(identify("H. Legs", "Legs", "Arsenal"), 1, testWorkload));
+});
+
+test("registered names with extra components still match", () => {
+  // FPL registers full legal names and nicknames that a reference dataset omits.
+  assert.ok(workloadImpact(identify("Heavy Legs Santos", "Legs", "Arsenal"), 1, testWorkload));
+  assert.ok(workloadImpact(identify("Enrique Heavy Legs Cascante", "Enrique", "Arsenal"), 1, testWorkload));
+});
+
+test("an ambiguous surname needs the club to disambiguate", () => {
+  const ambiguous: TournamentWorkload = {
+    ...testWorkload,
+    records: [
+      { ...testWorkload.records[0], player: "Emiliano Martinez", club: "Aston Villa", riskScore: 7 },
+      { ...testWorkload.records[0], player: "Lisandro Martinez", club: "Manchester United", riskScore: 10 },
+    ],
+  };
+  const villa = workloadImpact(
+    identify("Emiliano Martinez Romero", "Martinez", "Aston Villa"), 1, ambiguous,
+  );
+  const united = workloadImpact(
+    identify("Lisandro Martinez", "Martinez", "Manchester United"), 1, ambiguous,
+  );
+  assert.equal(villa?.player, "Emiliano Martinez");
+  assert.equal(united?.player, "Lisandro Martinez");
+  // With no club to separate them, neither is guessed at.
+  assert.equal(workloadImpact(identify("Someone Martinez", "Martinez", "Everton"), 1, ambiguous), null);
+});
+
+test("a negated medical note is not read as an injury", () => {
+  const monitored: TournamentWorkload = {
+    ...testWorkload,
+    injuries: [{
+      player: "Watchful Winger", club: "Arsenal", issue: "Achilles",
+      status: "Monitor; surgery reportedly not expected",
+    }],
+  };
+  const impact = workloadImpact(identify("Watchful Winger", "Winger", "Arsenal"), 1, monitored)!;
+  // "surgery reportedly not expected" must not register as surgery.
+  assert.equal(impact.availabilityCeiling, 0.8);
+});
+
+test("minutes withheld scale with the load actually carried", () => {
+  const mixed: TournamentWorkload = {
+    ...testWorkload,
+    records: [
+      { ...testWorkload.records[0], player: "Ever Present", riskScore: 10 },
+      { ...testWorkload.records[0], player: "Cameo Only", riskScore: 4 },
+    ],
+  };
+  const heavy = workloadImpact(identify("Ever Present", "Present", "Arsenal"), 1, mixed)!;
+  const light = workloadImpact(identify("Cameo Only", "Only", "Arsenal"), 1, mixed)!;
+  assert.ok(heavy.minutesWithheld > light.minutesWithheld * 3);
 });
 
 test("applying workload preserves the minutes probability invariant", () => {
@@ -196,7 +290,10 @@ test("applying workload preserves the minutes probability invariant", () => {
     reasons: ["baseline"],
     modelVersion: "expected-minutes-baseline-v1" as const,
   };
-  const adjusted = applyWorkload(projection, workloadImpact(241, 1, testWorkload)!);
+  const adjusted = applyWorkload(
+    projection,
+    workloadImpact(identify("Heavy Legs", "Legs", "Arsenal"), 1, testWorkload)!,
+  );
   assert.equal(
     adjusted.startProbability + adjusted.substituteProbability + adjusted.zeroMinutesProbability,
     100,
@@ -316,20 +413,38 @@ test("the projection context supplies live scoring rules and team strength", () 
 });
 
 test("international workload lowers the projection of an affected player", () => {
-  const players = [element({ id: 1, region: 241 })];
-  const minutes = new Map([[1, projectPlayer(players[0], oneFixture, twoTeams, 1).expectedMinutes]]);
-  const context = { ...buildProjectionContext(players, minutes), workload: testWorkload };
-  const rested = projectPlayer(players[0], oneFixture, twoTeams, 1, undefined, undefined, undefined, context);
-  const unaffected = projectPlayer(
-    element({ id: 1, region: 500 }),
-    oneFixture,
-    twoTeams,
-    1,
-    undefined,
-    undefined,
-    undefined,
-    context,
-  );
-  assert.ok(rested.xp1 < unaffected.xp1);
+  // "AAA" is the short name given to team 1 in this suite's team map, and the
+  // workload dataset is matched on club name.
+  const affected = element({ id: 1, first_name: "Heavy", second_name: "Legs", web_name: "Legs" });
+  const control = element({ id: 1, first_name: "Nobody", second_name: "Here", web_name: "Here" });
+  const workload = {
+    ...testWorkload,
+    records: testWorkload.records.map((record) =>
+      record.player === "Heavy Legs" ? { ...record, club: "AAA" } : record,
+    ),
+  };
+  const minutes = new Map([[1, projectPlayer(affected, oneFixture, twoTeams, 1).expectedMinutes]]);
+  const context = { ...buildProjectionContext([affected], minutes), workload };
+
+  const rested = projectPlayer(affected, oneFixture, twoTeams, 1, undefined, undefined, undefined, context);
+  const unaffected = projectPlayer(control, oneFixture, twoTeams, 1, undefined, undefined, undefined, context);
+
+  assert.ok(rested.xp1 < unaffected.xp1, `${rested.xp1} should be below ${unaffected.xp1}`);
   assert.equal(rested.expectedMinutes.modelVersion, "expected-minutes-workload-v1");
+});
+
+test("a reported injury drives an affected player's projection toward zero", () => {
+  const injured = element({ id: 1, first_name: "Broken", second_name: "Back", web_name: "Back" });
+  const workload = {
+    ...testWorkload,
+    records: testWorkload.records.map((record) =>
+      record.player === "Broken Back" ? { ...record, club: "AAA" } : record,
+    ),
+  };
+  const minutes = new Map([[1, projectPlayer(injured, oneFixture, twoTeams, 1).expectedMinutes]]);
+  const context = { ...buildProjectionContext([injured], minutes), workload };
+  const projection = projectPlayer(injured, oneFixture, twoTeams, 1, undefined, undefined, undefined, context);
+
+  assert.equal(projection.expectedMinutes.startProbability, 0);
+  assert.equal(projection.xp1, 0);
 });

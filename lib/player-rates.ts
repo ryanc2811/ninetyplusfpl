@@ -1,4 +1,9 @@
 import type { Position } from "./contracts/fpl.ts";
+import {
+  expectedBonusPer90,
+  FALLBACK_CALIBRATION,
+  type OutputCalibration,
+} from "./calibration.ts";
 
 /**
  * Per-90 rate estimation.
@@ -18,10 +23,28 @@ import type { Position } from "./contracts/fpl.ts";
 
 const PRIOR_MINUTES = 810;
 
+/**
+ * Finishing skill — realised goals against expected goals — is only weakly
+ * persistent, so a player's own ratio is shrunk hard toward the league
+ * calibration. Assist conversion and bonus accumulation are more repeatable,
+ * being driven by role and set-piece duty, so they shrink less.
+ */
+const FINISHING_PRIOR_MINUTES = 2400;
+const ASSIST_CONVERSION_PRIOR_MINUTES = 1800;
+const BONUS_PRIOR_MINUTES = 1200;
+
 export type PlayerRates = {
   /** Non-penalty and penalty expected goals per 90 minutes. */
   expectedGoals: number;
   expectedAssists: number;
+  /**
+   * Realised-output rates per 90. These, not the expected metrics above, are
+   * what the projection scores from: expected goals measure chance quality,
+   * whereas FPL pays for goals, assists and bonus as they are actually awarded.
+   */
+  goals: number;
+  assists: number;
+  bonus: number;
   /** Raw defensive actions per 90, on the position's counting definition. */
   defensiveActions: number;
   saves: number;
@@ -122,10 +145,29 @@ export type RateSource = {
   expected_goals_conceded_per_90: unknown;
   yellow_cards: unknown;
   red_cards: unknown;
+  /** Realised season output, used to calibrate the expected metrics. */
+  goals_scored?: unknown;
+  assists?: unknown;
+  bonus?: unknown;
+  bps?: unknown;
   penalties_order?: unknown;
   corners_and_indirect_freekicks_order?: unknown;
   direct_freekicks_order?: unknown;
 };
+
+/**
+ * Shrinks a realised rate toward a structurally-predicted prior. This is the
+ * one principle behind goals, assists and bonus: the model never trusts a
+ * player's raw output, and never ignores it either.
+ */
+function shrinkTowardPrior(
+  observed: number,
+  prior: number,
+  minutes: number,
+  priorMinutes: number,
+) {
+  return (observed * minutes + prior * priorMinutes) / (minutes + priorMinutes);
+}
 
 /**
  * Uplift applied to expected goals for the recognised first-choice penalty
@@ -136,7 +178,11 @@ export type RateSource = {
 const PENALTY_DUTY_EXPECTED_GOALS = 0.055;
 const SET_PIECE_DUTY_EXPECTED_ASSISTS = 0.035;
 
-export function estimatePlayerRates(player: RateSource, position: Position): PlayerRates {
+export function estimatePlayerRates(
+  player: RateSource,
+  position: Position,
+  calibration: OutputCalibration = FALLBACK_CALIBRATION,
+): PlayerRates {
   const minutes = Math.max(0, numeric(player.minutes));
   const price = numeric(player.now_cost) / 10;
   const signal = priceSignal(price, position);
@@ -170,6 +216,41 @@ export function estimatePlayerRates(player: RateSource, position: Position): Pla
     notes.push(takesCorners && takesFreekicks ? "Corners and direct free kicks" : takesCorners ? "First-choice corners" : "First-choice direct free kicks");
   }
 
+  // Expected metrics describe chance quality. FPL pays for realised events, so
+  // each expected rate becomes the *prior* for the matching realised rate and
+  // the player's own output is shrunk toward it.
+  const perNinetyRate = (total: unknown) =>
+    minutes > 0 ? (numeric(total) * 90) / minutes : 0;
+
+  const goals = shrinkTowardPrior(
+    perNinetyRate(player.goals_scored),
+    expectedGoals * calibration.goalsPerExpectedGoal,
+    minutes,
+    FINISHING_PRIOR_MINUTES,
+  );
+  const assists = shrinkTowardPrior(
+    perNinetyRate(player.assists),
+    expectedAssists * calibration.assistsPerExpectedAssist,
+    minutes,
+    ASSIST_CONVERSION_PRIOR_MINUTES,
+  );
+
+  // Bonus is a within-match rank statistic, so a player's BPS rate predicts it
+  // structurally while their realised bonus carries the rest of the signal.
+  const bpsPer90 = perNinetyRate(player.bps);
+  const bonus = shrinkTowardPrior(
+    perNinetyRate(player.bonus),
+    expectedBonusPer90(calibration, bpsPer90),
+    minutes,
+    BONUS_PRIOR_MINUTES,
+  );
+
+  if (minutes >= 900 && expectedGoals > 0.15) {
+    const finishing = goals / Math.max(0.0001, expectedGoals);
+    if (finishing >= 1.12) notes.push(`Finishes above expectation (${finishing.toFixed(2)}x xG)`);
+    else if (finishing <= 0.88) notes.push(`Finishes below expectation (${finishing.toFixed(2)}x xG)`);
+  }
+
   const defensiveActions = shrink(
     numeric(player.defensive_contribution_per_90),
     priors.defensiveActions,
@@ -199,6 +280,9 @@ export function estimatePlayerRates(player: RateSource, position: Position): Pla
   return {
     expectedGoals: Math.max(0, expectedGoals),
     expectedAssists: Math.max(0, expectedAssists),
+    goals: Math.max(0, goals),
+    assists: Math.max(0, assists),
+    bonus: clamp(bonus, 0, 2.2),
     defensiveActions: Math.max(0, defensiveActions),
     saves: Math.max(0, saves),
     yellowCards: clamp(yellowCards, 0, 1),

@@ -76,20 +76,46 @@ test("preseason projections retain reliability-weighted prior-season performance
     },
   ];
   const teams = new Map([[1, "AAA"], [2, "BBB"]]);
+  // Realised output is stated alongside the expected rates, because the model
+  // shrinks one toward the other and a season cannot contain 0.75 xG per 90
+  // with no goals.
   const strongHistory = projectPlayer(
-    player({ expected_goals_per_90: "0.75", expected_assists_per_90: "0.30", minutes: 2_900 }),
+    player({
+      expected_goals_per_90: "0.75", expected_assists_per_90: "0.30", minutes: 2_900,
+      goals_scored: 24, assists: 10,
+    }),
     gameweekOneFixtures,
     teams,
     1,
   );
   const weakHistory = projectPlayer(
-    player({ expected_goals_per_90: "0.10", expected_assists_per_90: "0.05", minutes: 2_900 }),
+    player({
+      expected_goals_per_90: "0.10", expected_assists_per_90: "0.05", minutes: 2_900,
+      goals_scored: 3, assists: 2,
+    }),
     gameweekOneFixtures,
     teams,
     1,
   );
 
   assert.ok(strongHistory.xp1 > weakHistory.xp1 + 1.5);
+});
+
+test("realised output separates two players with the same expected rates", () => {
+  const gameweekOneFixtures: FplFixture[] = [
+    {
+      id: 100, event: 1, team_h: 1, team_a: 2,
+      team_h_difficulty: 3, team_a_difficulty: 3,
+      kickoff_time: "2026-08-15T14:00:00Z", finished: false,
+    },
+  ];
+  const teams = new Map([[1, "AAA"], [2, "BBB"]]);
+  const base = { expected_goals_per_90: "0.50", minutes: 2_900 };
+  const clinical = projectPlayer(player({ ...base, goals_scored: 22 }), gameweekOneFixtures, teams, 1);
+  const wasteful = projectPlayer(player({ ...base, goals_scored: 8 }), gameweekOneFixtures, teams, 1);
+
+  // Expected goals measure chance quality; FPL pays for the finish.
+  assert.ok(clinical.xp1 > wasteful.xp1);
 });
 
 test("a short minutes sample is shrunk toward the position prior", () => {

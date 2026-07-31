@@ -30,11 +30,18 @@ const CONFIDENCE_MINUTES = 12_000;
  * strongly they attack. Difficulty is expressed from the perspective of the
  * team facing them, so 5 is the hardest opponent.
  */
+/**
+ * The spread here matters most for promoted sides, which carry almost no
+ * Premier League minutes (one 2026/27 newcomer has none at all), so their
+ * rating comes entirely from this mapping. An earlier, narrower spread put
+ * them close to league average, which flattered their attack and suppressed
+ * clean-sheet probabilities for the strong defences facing them.
+ */
 const DIFFICULTY_DEFENCE_WEAKNESS: Record<number, number> = {
-  1: 1.28, 2: 1.13, 3: 1.0, 4: 0.88, 5: 0.77,
+  1: 1.45, 2: 1.2, 3: 1.0, 4: 0.84, 5: 0.68,
 };
 const DIFFICULTY_ATTACK_STRENGTH: Record<number, number> = {
-  1: 0.77, 2: 0.88, 3: 1.0, 4: 1.13, 5: 1.28,
+  1: 0.62, 2: 0.82, 3: 1.0, 4: 1.18, 5: 1.4,
 };
 
 export type TeamStrength = {
