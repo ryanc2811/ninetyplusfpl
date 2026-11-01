@@ -28,6 +28,8 @@ import type {
   PointsBreakdown,
   TeamOutlook,
 } from "../../lib/contracts/fpl";
+import type { EntrySquadResponse } from "../../lib/contracts/live";
+import { parseTeamId } from "../../lib/fpl-team-id";
 import type {
   LeagueInsightsResponse,
   LeagueSummary,
@@ -35,7 +37,7 @@ import type {
   ManagerSummary,
 } from "../../lib/contracts/leagues";
 import { createChipPlan, managerChoicesFromPlan, squadStrategyForGameweek, validateChipPlan, type ChipPlanItem } from "../../lib/chip-strategy";
-import { optimiseSquad, pitchLayout, projectedStrategyPoints, replaceSquadPlayer, replacementError, resolveCaptaincy, selectBestLineup, selectLineup, swapLineupPlayer, templateLineup, validateLineup, validateSquad, type Formation, type SquadAsset } from "../../lib/squad-builder";
+import { FORMATIONS, optimiseSquad, pitchLayout, projectedStrategyPoints, replaceSquadPlayer, replacementError, resolveCaptaincy, selectBestLineup, selectLineup, swapLineupPlayer, templateLineup, validateLineup, validateSquad, type Formation, type SquadAsset } from "../../lib/squad-builder";
 
 export type Position = "GK" | "DEF" | "MID" | "FWD";
 export type Player = {
@@ -251,6 +253,22 @@ function useAppStateValue() {
   const [builderQuery, setBuilderQuery] = useState("");
   const [builderMessage, setBuilderMessage] = useState("Select a player on the pitch or bench to replace them.");
   const [benchOrderIds, setBenchOrderIds] = useState<number[]>([]);
+  /**
+   * A drafted squad is built to the £100.0m starting budget; an imported one
+   * is judged against what it is actually worth plus the manager's bank, so a
+   * real team that has risen in value is not reported as over budget.
+   */
+  const [budget, setBudget] = useState(100);
+  const [squadSource, setSquadSource] = useState<"model" | "fpl">("model");
+  const [entrySquad, setEntrySquad] = useState<EntrySquadResponse | null>(null);
+  const [squadImportError, setSquadImportError] = useState<string | null>(null);
+  /**
+   * The projection feed and the manager's squad arrive independently and
+   * either can win the race, so each callback hands the other what it needs
+   * rather than a second effect firing on both.
+   */
+  const marketRef = useRef<Player[]>(fallbackPlayers);
+  const entrySquadRef = useRef<EntrySquadResponse | null>(null);
   const theme = useSyncExternalStore(subscribeToTheme, readTheme, readServerTheme);
   const [teamIdInput, setTeamIdInput] = useState("");
   const [manager, setManager] = useState<ManagerSummary | null>(null);
@@ -268,20 +286,97 @@ function useAppStateValue() {
     return data;
   }
 
+
+  /**
+   * Replaces the drafted squad with the manager's real one.
+   *
+   * Prices and expected points come from the projection market, so an
+   * imported squad is measured the same way a drafted one is; only the budget
+   * changes, to what this squad is actually worth plus the bank.
+   */
+  function applyEntrySquad(squad: EntrySquadResponse, market: Player[]) {
+    const byId = new Map(market.map((player) => [player.id, player]));
+    const assets = squad.picks
+      .map((pick) => {
+        const player = byId.get(pick.playerId);
+        return player ? { pick, asset: playerToSquadAsset(player) } : null;
+      })
+      .filter((entry): entry is { pick: EntrySquadResponse["picks"][number]; asset: SquadAsset } =>
+        entry !== null);
+
+    if (assets.length !== squad.picks.length) {
+      setSquadImportError(
+        "Some of your players are missing from the projection feed, so the model draft was kept.",
+      );
+      return;
+    }
+
+    const starters = assets.filter((entry) => entry.pick.multiplier > 0);
+    const bench = assets
+      .filter((entry) => entry.pick.multiplier === 0)
+      .sort((a, b) => a.pick.position - b.pick.position);
+    const count = (position: Position) =>
+      starters.filter((entry) => entry.asset.position === position).length;
+    const shape = `${count("DEF")}-${count("MID")}-${count("FWD")}` as Formation;
+
+    setBuilderSquad(assets.map((entry) => entry.asset));
+    setStarterIds(starters.map((entry) => entry.asset.id));
+    setBenchOrderIds(bench.map((entry) => entry.asset.id));
+    setFormation(FORMATIONS.includes(shape) ? shape : "4-4-2");
+    setCaptainId(squad.picks.find((pick) => pick.isCaptain)?.playerId ?? null);
+    setViceCaptainId(squad.picks.find((pick) => pick.isViceCaptain)?.playerId ?? null);
+    setSelectedSlotId(null);
+    setOptimised(false);
+    // The official value is what the squad was bought for; the builder prices
+    // players at today's market. Setting the budget from the market cost plus
+    // the real bank keeps the bank figure honest and the rules check fair.
+    const marketCost = assets.reduce((total, entry) => total + entry.asset.price, 0);
+    setBudget(Number((marketCost + squad.bank).toFixed(1)));
+    setSquadSource("fpl");
+    setBuilderMessage(
+      `Your real GW${squad.event} squad: £${squad.squadValue.toFixed(1)}m in FPL, £${squad.bank.toFixed(1)}m in the bank. Prices here are today's market.`,
+    );
+  }
+
+  /**
+   * Pulls the manager's actual squad so the builder starts from the team they
+   * really own rather than a model draft. Picks are ids only; the projected
+   * market the app already holds supplies prices and expected points.
+   */
+  async function importEntrySquad(entryId: number) {
+    try {
+      const response = await fetch(`/api/entry/${entryId}/squad`);
+      const payload = (await response.json()) as EntrySquadResponse & { detail?: string };
+      if (!response.ok) {
+        setSquadImportError(payload.detail ?? "Your squad could not be loaded.");
+        return;
+      }
+      setSquadImportError(null);
+      setEntrySquad(payload);
+      entrySquadRef.current = payload;
+      if (marketRef.current.length) applyEntrySquad(payload, marketRef.current);
+    } catch {
+      setSquadImportError("Your squad could not be loaded from the official feed.");
+    }
+  }
+
   function applyManager(payload: ManagerLeaguesResponse, entryId: number) {
     setManager(payload.manager);
     setManagerLeagues(payload.leagues);
     setConnectStatus("idle");
     window.localStorage.setItem(TEAM_ID_STORAGE_KEY, String(entryId));
+    void importEntrySquad(entryId);
     const firstInvitational = payload.leagues.find((league) => league.type === "invitational");
     if (firstInvitational) void openLeague(firstInvitational.id);
   }
 
   async function connectTeam(rawId: string) {
-    const entryId = Number(rawId.trim());
-    if (!Number.isInteger(entryId) || entryId <= 0) {
+    const entryId = parseTeamId(rawId);
+    if (entryId === null) {
       setConnectStatus("error");
-      setConnectError("Enter the numeric team ID from your FPL 'Points' page URL.");
+      setConnectError(
+        "Enter your numeric team ID, or paste the URL of your FPL 'Points' page.",
+      );
       return;
     }
     setConnectStatus("loading");
@@ -310,6 +405,9 @@ function useAppStateValue() {
 
   function disconnectTeam() {
     setManager(null);
+    setEntrySquad(null);
+    entrySquadRef.current = null;
+    setSquadImportError(null);
     setManagerLeagues([]);
     setSelectedLeagueId(null);
     setLeagueInsights(null);
@@ -363,7 +461,10 @@ function useAppStateValue() {
       .then((data) => {
         if (data.players?.length) {
           setPlayers(data.players);
-          const optimisedDraft = optimiseSquad(
+          marketRef.current = data.players;
+          const imported = entrySquadRef.current;
+          if (imported) applyEntrySquad(imported, data.players);
+          const optimisedDraft = imported ? null : optimiseSquad(
             data.players.map(playerToSquadAsset),
             100,
             1,
@@ -412,7 +513,11 @@ function useAppStateValue() {
       .sort((a, b) => (range === 1 ? b.xp1 - a.xp1 : b.xp3 - a.xp3));
   }, [players, position, query, range]);
 
-  const builderValidation = useMemo(() => validateSquad(builderSquad), [builderSquad]);
+  const builderValidation = useMemo(
+    () => validateSquad(builderSquad, budget),
+    [builderSquad, budget],
+  );
+  const bankRemaining = Number((budget - builderValidation.cost).toFixed(1));
   const selectedSlot = builderSquad.find((player) => player.id === selectedSlotId) ?? null;
   const lineupValidation = useMemo(
     () => validateLineup(builderSquad, starterIds),
@@ -501,7 +606,7 @@ function useAppStateValue() {
     for (const outgoing of builderSquad) {
       for (const candidate of players) {
         const incoming = playerToSquadAsset(candidate);
-        if (replacementError(builderSquad, outgoing.id, incoming)) continue;
+        if (replacementError(builderSquad, outgoing.id, incoming, budget)) continue;
         const gain = incoming.xp3 - outgoing.xp3;
         if (gain > 0 && (!best || gain > best.gain)) {
           best = { outgoing, incoming, gain };
@@ -509,7 +614,7 @@ function useAppStateValue() {
       }
     }
     return best;
-  }, [builderSquad, players]);
+  }, [builderSquad, players, budget]);
   const projectionLeaders = useMemo(
     () => [...players].sort((a, b) => b.xp1 - a.xp1).slice(0, 3),
     [players],
@@ -576,7 +681,7 @@ function useAppStateValue() {
 
   function chooseReplacement(candidate: SquadAsset) {
     if (selectedSlotId === null) return;
-    const error = replacementError(builderSquad, selectedSlotId, candidate);
+    const error = replacementError(builderSquad, selectedSlotId, candidate, budget);
     if (error) {
       setBuilderMessage(error);
       return;
@@ -670,6 +775,8 @@ function useAppStateValue() {
   }
 
   function resetDraft() {
+    setBudget(100);
+    setSquadSource("model");
     const strategy = squadStrategyForGameweek(chipPlan, 1);
     const optimisedDraft = optimiseSquad(players.map(playerToSquadAsset), 100, 1, strategy);
     const nextSquad = optimisedDraft?.squad ?? initialBuilderSquad;
@@ -760,6 +867,9 @@ function useAppStateValue() {
     runOptimiser, selectBuilderSlot, chooseReplacement, changeFormation,
     applyLineupSwap, promoteBenchPlayer, moveBenchPlayer, resetDraft,
     assignCaptain, assignViceCaptain,
+
+    // Squad source
+    budget, bankRemaining, squadSource, entrySquad, squadImportError, importEntrySquad,
 
     // Chip planner
     chipPlan, chipPlanValidation, gw1Strategy, nextPlannedChip, strategyMessage,

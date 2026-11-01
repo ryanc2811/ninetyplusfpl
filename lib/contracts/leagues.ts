@@ -65,6 +65,14 @@ export type MonthWindow = {
   gameweeksPlayed: number;
 };
 
+/** One scored Gameweek inside a month window. */
+export type MonthGameweek = {
+  event: number;
+  /** Gameweek score before the transfer cost is applied. */
+  points: number;
+  netPoints: number;
+};
+
 export type MonthlyStanding = {
   entryId: number;
   teamName: string;
@@ -76,6 +84,14 @@ export type MonthlyStanding = {
   transferCost: number;
   pointsOnBench: number;
   gameweeksCounted: number;
+  /**
+   * Rank as it stood before the most recent scored Gameweek, which is what the
+   * movement arrow compares against. Null when only one Gameweek has counted,
+   * because nothing has moved yet.
+   */
+  previousRank: number | null;
+  /** Every scored Gameweek of the month, in order. */
+  gameweeks: MonthGameweek[];
 };
 
 export type MonthlyResult = {
@@ -131,6 +147,11 @@ export type LeagueInsightsResponse = {
   /** Gameweeks scored and data-checked at the time of retrieval. */
   completedGameweeks: number;
   months: MonthlyResult[];
+  /**
+   * Month windows that have not started. The interface needs them to show the
+   * next month as an empty state rather than pretending it does not exist.
+   */
+  upcomingMonths: MonthWindow[];
   badges: Badge[];
   managers: ManagerInsight[];
   provenance: {

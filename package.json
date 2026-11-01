@@ -12,7 +12,7 @@
     "vercel-build": "next build",
     "build:next": "next build",
     "start:next": "next start",
-    "test": "npm run build && node --test tests/rendered-html.test.mjs && node --experimental-strip-types --test tests/benchmark.test.ts tests/chip-strategy.test.ts tests/fpl-model.test.ts tests/fpl-provider.test.ts tests/league-insights.test.ts tests/prediction-model.test.ts tests/squad-builder.test.ts",
+    "test": "npm run build && node --test tests/rendered-html.test.mjs && node --experimental-strip-types --test tests/benchmark.test.ts tests/chip-strategy.test.ts tests/fpl-model.test.ts tests/fpl-provider.test.ts tests/league-insights.test.ts tests/live-standings.test.ts tests/prediction-model.test.ts tests/squad-builder.test.ts",
     "benchmark": "node --experimental-strip-types scripts/benchmark-report.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",

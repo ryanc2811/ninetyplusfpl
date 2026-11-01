@@ -1,5 +1,10 @@
 import type { LeagueInsightsResponse } from "../../../../lib/contracts/leagues";
-import { awardBadges, managerInsights, monthlyResults } from "../../../../lib/league-insights";
+import {
+  awardBadges,
+  managerInsights,
+  monthlyResults,
+  upcomingMonthWindows,
+} from "../../../../lib/league-insights";
 import { OfficialFplLeagueProvider } from "../../../../lib/providers/league-provider";
 
 /**
@@ -68,6 +73,7 @@ export async function GET(
       },
       completedGameweeks: calendar.completedGameweeks,
       months,
+      upcomingMonths: upcomingMonthWindows(calendar.phases, calendar.events),
       badges: awardBadges(months, insights),
       managers: insights.sort((a, b) => b.totalPoints - a.totalPoints),
       provenance: {

@@ -6,12 +6,12 @@ import { useAppState } from "../_state/app-state";
 /** The decision room: what the model thinks, and the one move it would make next. */
 export function OverviewView() {
   const {
+    bankRemaining,
     animatedGw1,
     animatedGw3,
     animatedSquadValue,
     builderBench,
     builderPitch,
-    builderValidation,
     captain,
     captainEdge,
     captainId,
@@ -55,7 +55,7 @@ export function OverviewView() {
           </article>
           <article className="metric">
             <span>SQUAD VALUE</span>
-            <div className="metric-value">£{animatedSquadValue}<span className="bank">+ £{(100 - builderValidation.cost).toFixed(1)} ITB</span></div>
+            <div className="metric-value">£{animatedSquadValue}<span className="bank">+ £{bankRemaining.toFixed(1)} ITB</span></div>
             <footer>15 / 15 · Rules valid</footer>
           </article>
           <article className="metric">

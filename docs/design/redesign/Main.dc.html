@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Leagues — Manager of the Month</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;800&amp;family=Geist+Mono:wght@500;600&amp;family=Instrument+Serif&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#11704a}a:hover{color:#0b1410}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid #11704a;outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@keyframes np-pulse{0%{box-shadow:0 0 0 0 rgba(183,243,74,.7)}70%{box-shadow:0 0 0 8px rgba(183,243,74,0)}100%{box-shadow:0 0 0 0 rgba(183,243,74,0)}}
+@keyframes np-flash{from{background:#d4f5a0}to{background:transparent}}
+.live-dot{animation:np-pulse 1.6s infinite}
+.flash{animation:np-flash 1.4s ease-out}
+@media (prefers-reduced-motion: reduce){.live-dot,.flash{animation:none}}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; display: flex; flex-direction: column; background: #f3f5f0; color: #0b1410; font-family: Geist, ui-sans-serif, system-ui, sans-serif; font-variant-numeric: tabular-nums">
+
+  <!-- Top bar -->
+  <header style="flex: none; padding: 12px 16px 8px; background: rgba(243,245,240,.9); border-bottom: 1px solid #d6ded5; display: flex; flex-direction: column; gap: 6px">
+    <div style="display: flex; align-items: center; gap: 8px; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; line-height: 16px; letter-spacing: .08em; font-weight: 500; color: #4f5f56">
+      <span class="live-dot" style="width: 8px; height: 8px; border-radius: 9999px; background: #b7f34a; border: 1px solid #0b1410"></span>
+      <span>GW 10 · LIVE · NEXT DEADLINE SAT 11:00</span>
+    </div>
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+      <h1 style="margin: 0; font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: 28px; line-height: 32px; letter-spacing: -.01em">Leagues</h1>
+      <button type="button" aria-label="Switch league" style="min-height: 44px; display: flex; align-items: center; gap: 6px; padding: 0 12px; border: 1px solid #7f9086; background: #ffffff; border-radius: 10px; font-size: 13px; font-weight: 500; cursor: pointer">
+        Sunday League Legends
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Scrolling content -->
+  <main style="flex: 1; overflow-y: auto; padding: 12px 16px 24px; display: flex; flex-direction: column; gap: 12px">
+
+    <!-- Month switcher -->
+    <div role="tablist" aria-label="Month" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; background: #eef2ec; border-radius: 10px">
+      <sc-for list="{{ months }}" as="mo" hint-placeholder-count="3">
+        <button type="button" role="tab" aria-selected="{{ mo.selected }}" onClick="{{ mo.pick }}" style="min-height: 40px; border: 0; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 6px; background: {{ mo.bg }}; box-shadow: {{ mo.shadow }}">
+          {{ mo.label }}
+          <sc-if value="{{ mo.live }}" hint-placeholder-val="{{ false }}"><span style="width: 6px; height: 6px; border-radius: 9999px; background: #11704a"></span></sc-if>
+        </button>
+      </sc-for>
+    </div>
+
+    <!-- ===== OCTOBER (live) ===== -->
+    <sc-if value="{{ isOct }}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-direction: column; gap: 12px">
+
+        <!-- Hero -->
+        <section aria-label="Your position" style="background: #0b1410; color: #eef5ef; border-radius: 20px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+          <div style="display: flex; justify-content: space-between; align-items: center; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: .08em; color: #a3b6aa">
+            <span>OCTOBER · GW 7–10</span>
+            <span style="display: flex; align-items: center; gap: 6px; color: #b7f34a"><span class="live-dot" style="width: 8px; height: 8px; border-radius: 9999px; background: #b7f34a"></span>FINAL GW</span>
+          </div>
+          <p style="margin: 0; font-family: 'Instrument Serif', Georgia, serif; font-size: 30px; line-height: 34px; letter-spacing: -.01em">{{ heroLine }}</p>
+          <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+            <div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; color: #a3b6aa">Your GW 10</span><span style="font-family: 'Geist Mono', monospace; font-size: 17px; font-weight: 600">{{ you.gw }} pts</span></div>
+            <div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; color: #a3b6aa">Still to play</span><span style="font-family: 'Geist Mono', monospace; font-size: 17px; font-weight: 600">{{ you.left }} players</span></div>
+            <div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; color: #a3b6aa">Win chance</span><span style="font-family: 'Geist Mono', monospace; font-size: 17px; font-weight: 600; color: #b7f34a">{{ you.winStr }}</span></div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <div role="img" aria-label="{{ winAria }}" style="display: flex; height: 10px; border-radius: 9999px; overflow: hidden; gap: 2px">
+              <sc-for list="{{ winSegs }}" as="seg" hint-placeholder-count="4">
+                <span style="width: {{ seg.w }}; background: {{ seg.c }}; transition: width 220ms ease"></span>
+              </sc-for>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: #a3b6aa">
+              <sc-for list="{{ winSegs }}" as="seg" hint-placeholder-count="4">
+                <span style="display: flex; align-items: center; gap: 4px"><span style="width: 8px; height: 8px; border-radius: 2px; background: {{ seg.c }}"></span>{{ seg.label }} {{ seg.pct }}</span>
+              </sc-for>
+            </div>
+          </div>
+        </section>
+
+        <!-- Live ticker -->
+        <div aria-live="polite" style="display: flex; align-items: center; gap: 12px; padding: 12px; background: #ffffff; border: 1px solid #d6ded5; border-radius: 14px">
+          <span style="flex: none; font-family: 'Geist Mono', monospace; font-size: 12px; font-weight: 500; color: #4f5f56">{{ ev.time }}</span>
+          <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+            <span style="font-size: 15px; font-weight: 600; line-height: 20px">{{ ev.text }}</span>
+            <span style="font-size: 13px; color: #4f5f56">{{ ev.impact }}</span>
+          </div>
+          <sc-if value="{{ ended }}" hint-placeholder-val="{{ false }}">
+            <button type="button" onClick="{{ replay }}" style="flex: none; min-height: 44px; padding: 0 12px; border: 1px solid #7f9086; border-radius: 10px; background: #ffffff; font-size: 13px; font-weight: 500; cursor: pointer">Replay</button>
+          </sc-if>
+        </div>
+
+        <!-- Standings -->
+        <section aria-label="October standings" style="background: #ffffff; border: 1px solid #d6ded5; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 2px rgba(11,20,16,.06)">
+          <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: #eef2ec; font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: .08em; color: #4f5f56">
+            <span>MANAGER</span><span>OCT NET · GAP</span>
+          </div>
+          <sc-for list="{{ rows }}" as="r" hint-placeholder-count="8">
+            <button type="button" class="{{ r.flashClass }}" onClick="{{ r.open }}" aria-label="{{ r.aria }}" style="width: 100%; min-height: 64px; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 0; border-top: 1px solid #d6ded5; text-align: left; cursor: pointer; background: {{ r.bg }}; box-shadow: {{ r.bar }}">
+              <span style="width: 22px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 2px">
+                <span style="font-family: 'Geist Mono', monospace; font-size: 15px; font-weight: 600">{{ r.rank }}</span>
+                <sc-if value="{{ r.up }}" hint-placeholder-val="{{ false }}"><svg width="10" height="8" viewBox="0 0 10 8" aria-hidden="true"><path d="M5 0 10 8H0z" fill="#11704a"/></svg></sc-if>
+                <sc-if value="{{ r.down }}" hint-placeholder-val="{{ false }}"><svg width="10" height="8" viewBox="0 0 10 8" aria-hidden="true"><path d="M5 8 0 0h10z" fill="#b0362a"/></svg></sc-if>
+              </span>
+              <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+                <span style="display: flex; align-items: center; gap: 6px; font-size: 16px; font-weight: 600; line-height: 22px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ r.name }}
+                  <sc-if value="{{ r.hasDelta }}" hint-placeholder-val="{{ false }}"><span style="font-family: 'Geist Mono', monospace; font-size: 12px; font-weight: 600; padding: 1px 6px; border-radius: 9999px; background: #b7f34a; color: #0b1410">{{ r.deltaStr }}</span></sc-if>
+                </span>
+                <span style="font-size: 13px; line-height: 18px; color: #4f5f56; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">GW {{ r.gw }} · {{ r.leftStr }}</span>
+                <span style="display: block; height: 4px; border-radius: 9999px; background: #e2e8e1; overflow: hidden; margin-top: 2px"><span style="display: block; height: 4px; width: {{ r.winW }}; background: {{ r.winC }}; transition: width 220ms ease"></span></span>
+              </span>
+              <span style="flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 2px">
+                <span style="font-family: 'Geist Mono', monospace; font-size: 17px; font-weight: 600">{{ r.month }}</span>
+                <span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: {{ r.gapC }}">{{ r.gap }}</span>
+              </span>
+            </button>
+          </sc-for>
+          <p style="margin: 0; padding: 10px 12px; border-top: 1px solid #d6ded5; font-size: 12px; color: #4f5f56">Net of transfer hits. Bar shows the model's chance to win the month. Tap a manager for live detail.</p>
+        </section>
+
+        <!-- What you need -->
+        <section style="background: #ffffff; border: 1px solid #d6ded5; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 8px">
+          <span style="font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: .08em; color: #4f5f56">WHAT DECIDES IT</span>
+          <h2 style="margin: 0; font-size: 20px; line-height: 26px; font-weight: 600">Salah (C) v Haaland (C)</h2>
+          <p style="margin: 0; font-size: 15px; line-height: 22px">Your captain and Dan's play at the same time. Everything else you share cancels out — 7 of your 11 starters are identical.</p>
+          <a href="H2H.dc.html" style="min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 10px; background: #0b1410; color: #eef5ef; font-weight: 600; font-size: 15px; text-decoration: none">Compare with Dan</a>
+        </section>
+      </div>
+    </sc-if>
+
+    <!-- ===== SEPTEMBER (final) ===== -->
+    <sc-if value="{{ isSep }}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <section style="background: #0b1410; color: #eef5ef; border-radius: 20px; padding: 16px; display: flex; flex-direction: column; gap: 8px">
+          <span style="font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: .08em; color: #a3b6aa">SEPTEMBER · GW 4–6 · FINAL</span>
+          <div style="display: flex; align-items: center; gap: 12px">
+            <span style="width: 44px; height: 44px; border-radius: 9999px; background: #b7f34a; color: #0b1410; display: flex; align-items: center; justify-content: center">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>
+            </span>
+            <div style="display: flex; flex-direction: column"><span style="font-family: 'Instrument Serif', Georgia, serif; font-size: 30px; line-height: 34px">You won September</span><span style="font-size: 13px; color: #a3b6aa">241 net points · 5 clear of Dan</span></div>
+          </div>
+        </section>
+        <section style="background: #ffffff; border: 1px solid #d6ded5; border-radius: 14px; overflow: hidden">
+          <sc-for list="{{ sepRows }}" as="s" hint-placeholder-count="8">
+            <div style="min-height: 56px; display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-top: 1px solid #d6ded5; background: {{ s.bg }}">
+              <span style="width: 22px; text-align: center; font-family: 'Geist Mono', monospace; font-size: 15px; font-weight: 600">{{ s.rank }}</span>
+              <span style="flex: 1; display: flex; flex-direction: column"><span style="font-size: 16px; font-weight: 600">{{ s.name }}</span><span style="font-size: 13px; color: #4f5f56">{{ s.team }}</span></span>
+              <span style="font-family: 'Geist Mono', monospace; font-size: 17px; font-weight: 600">{{ s.pts }}</span>
+            </div>
+          </sc-for>
+        </section>
+      </div>
+    </sc-if>
+
+    <!-- ===== NOVEMBER (upcoming) ===== -->
+    <sc-if value="{{ isNov }}" hint-placeholder-val="{{ false }}">
+      <section style="background: #ffffff; border: 1px solid #d6ded5; border-radius: 14px; padding: 40px 16px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#4f5f56" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+        <h2 style="margin: 0; font-size: 20px; font-weight: 600">November starts in GW 11</h2>
+        <p style="margin: 0; font-size: 15px; line-height: 22px; color: #4f5f56">Everyone resets to 0 at the Sat 11:00 deadline. GW 11–13 count towards November.</p>
+        <a href="Squad.dc.html" style="min-height: 44px; display: flex; align-items: center; padding: 0 16px; border-radius: 10px; background: #0b1410; color: #eef5ef; font-weight: 600; text-decoration: none">Plan GW 11</a>
+      </section>
+    </sc-if>
+  </main>
+
+  <!-- Tab bar -->
+  <nav aria-label="Main" style="flex: none; height: 64px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: rgba(243,245,240,.95); border-top: 1px solid #d6ded5">
+    <a href="Home.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #4f5f56; text-decoration: none; font-size: 12px; font-weight: 500"><span style="width: 56px; height: 30px; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></span>Home</a>
+    <a href="Squad.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #4f5f56; text-decoration: none; font-size: 12px; font-weight: 500"><span style="width: 56px; height: 30px; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 3 6l2 4 2-1v12h10V9l2 1 2-4-5-3a4 4 0 0 1-8 0z"/></svg></span>Squad</a>
+    <a href="Players.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #4f5f56; text-decoration: none; font-size: 12px; font-weight: 500"><span style="width: 56px; height: 30px; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span>Players</a>
+    <a href="Chips.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #4f5f56; text-decoration: none; font-size: 12px; font-weight: 500"><span style="width: 56px; height: 30px; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></span>Chips</a>
+    <a href="Main.dc.html" aria-current="page" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #0b1410; text-decoration: none; font-size: 12px; font-weight: 600"><span style="width: 56px; height: 30px; border-radius: 9999px; background: #b7f34a; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg></span>Leagues</a>
+  </nav>
+
+  <!-- Bottom sheet -->
+  <sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; z-index: 60; display: flex; flex-direction: column; justify-content: flex-end">
+      <button type="button" aria-label="Close" onClick="{{ close }}" style="position: absolute; inset: 0; border: 0; background: rgba(4,10,8,.56); cursor: pointer"></button>
+      <section role="dialog" aria-label="{{ sel.name }} live detail" style="position: relative; max-height: 82%; overflow-y: auto; background: #ffffff; border-radius: 24px 24px 0 0; box-shadow: 0 -12px 40px -12px rgba(11,20,16,.3); padding: 8px 16px 24px; display: flex; flex-direction: column; gap: 16px">
+        <span style="align-self: center; width: 40px; height: 4px; border-radius: 9999px; background: #e2e8e1; margin-top: 4px"></span>
+        <div style="display: flex; align-items: center; gap: 12px">
+          <span style="width: 44px; height: 44px; flex: none; border-radius: 9999px; background: #e2e8e1; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 15px">{{ sel.init }}</span>
+          <div style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+            <span style="font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: .08em; color: #4f5f56">{{ sel.eyebrow }}</span>
+            <span style="font-size: 20px; line-height: 26px; font-weight: 600">{{ sel.name }}</span>
+            <span style="font-size: 13px; color: #4f5f56">{{ sel.team }}</span>
+          </div>
+          <button type="button" aria-label="Close" onClick="{{ close }}" style="width: 44px; height: 44px; flex: none; border: 0; border-radius: 9999px; background: #eef2ec; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+          <div style="padding: 12px; background: #eef2ec; border-radius: 10px; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; color: #4f5f56">GW 10 live</span><span style="font-family: 'Instrument Serif', Georgia, serif; font-size: 32px; line-height: 36px">{{ sel.gw }}</span></div>
+          <div style="padding: 12px; background: #eef2ec; border-radius: 10px; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; color: #4f5f56">October net</span><span style="font-family: 'Instrument Serif', Georgia, serif; font-size: 32px; line-height: 36px">{{ sel.month }}</span></div>
+          <div style="padding: 12px; background: #eef2ec; border-radius: 10px; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; color: #4f5f56">Hits this month</span><span style="font-family: 'Geist Mono', monospace; font-size: 17px; font-weight: 600">{{ sel.hitsStr }}</span></div>
+          <div style="padding: 12px; background: #eef2ec; border-radius: 10px; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; color: #4f5f56">Win chance</span><span style="font-family: 'Geist Mono', monospace; font-size: 17px; font-weight: 600; color: #11704a">{{ sel.winStr }}</span></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <span style="font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: .08em; color: #4f5f56">STILL TO PLAY</span>
+          <sc-for list="{{ sel.toPlay }}" as="p" hint-placeholder-count="2">
+            <div style="min-height: 44px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #d6ded5; font-size: 15px">
+              <span style="font-weight: 600">{{ p.p }}</span>
+              <span style="font-family: 'Geist Mono', monospace; font-size: 13px; color: #4f5f56">{{ p.f }} · {{ p.t }}</span>
+            </div>
+          </sc-for>
+          <sc-if value="{{ sel.none }}" hint-placeholder-val="{{ false }}"><p style="margin: 0; font-size: 15px; color: #4f5f56">Everyone has played. This score is final unless bonus changes.</p></sc-if>
+        </div>
+        <sc-if value="{{ sel.hasDiffs }}" hint-placeholder-val="{{ true }}">
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <span style="font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: .08em; color: #4f5f56">AGAINST YOU</span>
+            <sc-for list="{{ sel.diffs }}" as="d" hint-placeholder-count="2">
+              <div style="display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border-radius: 10px; background: {{ d.bg }}; font-size: 15px; line-height: 22px">
+                <span style="font-weight: 600; color: {{ d.c }}">{{ d.tag }}</span><span>{{ d.t }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <a href="H2H.dc.html" style="min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 10px; background: #0b1410; color: #eef5ef; font-weight: 600; font-size: 15px; text-decoration: none">Compare squads</a>
+      </section>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"liveDemo":{"editor":"boolean","default":true},"$preview":{"width":390,"height":844}}'>
+const BASE = [
+  { id: 'dan', name: 'Dan Mercer', team: 'Mercer Than Ever', init: 'DM', month: 231, gw: 52, prev: 1, left: 2, win: 41, hits: 0,
+    toPlay: [{ p: 'Haaland (C)', f: 'MCI v BOU', t: '16:30' }, { p: 'Gvardiol', f: 'MCI v BOU', t: '16:30' }],
+    diffs: [{ tag: 'Risk', t: 'Captains Haaland — you own him uncaptained, so each return is +1× for Dan.', tone: 'neg' }, { tag: 'Edge', t: 'No Salah. Every Salah return is all yours.', tone: 'pos' }] },
+  { id: 'you', name: 'You', team: 'Ninety Minutes FC', init: 'RC', month: 227, gw: 61, prev: 3, left: 3, win: 38, hits: 4,
+    toPlay: [{ p: 'Salah (C)', f: 'LIV v CHE', t: '16:30' }, { p: 'Haaland', f: 'MCI v BOU', t: '16:30' }, { p: 'Gvardiol', f: 'MCI v BOU', t: '16:30' }], diffs: [] },
+  { id: 'priya', name: 'Priya Shah', team: 'Saka Potatoes', init: 'PS', month: 224, gw: 47, prev: 2, left: 1, win: 12, hits: 0,
+    toPlay: [{ p: 'Palmer', f: 'LIV v CHE', t: '16:30' }], diffs: [{ tag: 'Edge', t: 'Only one player left. She needs a Palmer haul and a blank from you.', tone: 'pos' }] },
+  { id: 'tom', name: 'Tom Ellis', team: 'Ellis Island', init: 'TE', month: 214, gw: 44, prev: 4, left: 2, win: 6, hits: 8,
+    toPlay: [{ p: 'Haaland', f: 'MCI v BOU', t: '16:30' }, { p: 'Robertson', f: 'LIV v CHE', t: '16:30' }], diffs: [{ tag: 'Edge', t: '13 behind you with fewer players left.', tone: 'pos' }] },
+  { id: 'josh', name: 'Josh Reid', team: 'Reid Between the Lines', init: 'JR', month: 206, gw: 58, prev: 6, left: 3, win: 3, hits: 12,
+    toPlay: [{ p: 'Salah', f: 'LIV v CHE', t: '16:30' }, { p: 'Gakpo', f: 'LIV v CHE', t: '16:30' }, { p: 'Gusto', f: 'LIV v CHE', t: '16:30' }], diffs: [{ tag: 'Edge', t: 'Owns Salah uncaptained — your captaincy doubles your gain.', tone: 'pos' }] },
+  { id: 'chloe', name: 'Chloe Barnes', team: 'Barnes Storming', init: 'CB', month: 198, gw: 39, prev: 5, left: 0, win: 0, hits: 0, toPlay: [], diffs: [{ tag: 'Edge', t: 'Finished on 39. Out of the October race.', tone: 'pos' }] },
+  { id: 'matt', name: 'Matt Okafor', team: 'Okafor the Win', init: 'MO', month: 191, gw: 50, prev: 7, left: 1, win: 0, hits: 4, toPlay: [{ p: 'Haaland', f: 'MCI v BOU', t: '16:30' }], diffs: [{ tag: 'Edge', t: 'Out of the October race.', tone: 'pos' }] },
+  { id: 'sam', name: 'Sam Whitley', team: 'Whit Happens', init: 'SW', month: 177, gw: 33, prev: 8, left: 2, win: 0, hits: 0, toPlay: [{ p: 'Palmer', f: 'LIV v CHE', t: '16:30' }, { p: 'Caicedo', f: 'LIV v CHE', t: '16:30' }], diffs: [{ tag: 'Edge', t: 'Out of the October race.', tone: 'pos' }] }
+];
+const START = { time: '16:30', text: 'LIV v CHE and MCI v BOU kicked off', impact: 'Last two matches of October. Points update as they happen.' };
+const EVENTS = [
+  { time: '16:41', text: 'Salah goal · LIV v CHE', d: { you: 10, josh: 5 }, win: { you: 55, dan: 28, priya: 10, tom: 4, josh: 3 } },
+  { time: '16:52', text: 'Haaland goal · MCI v BOU', d: { dan: 10, you: 5, tom: 5, matt: 5 }, win: { you: 51, dan: 35, priya: 8, tom: 4, josh: 2 } },
+  { time: '17:05', text: 'Palmer yellow card · LIV v CHE', d: { priya: -1, sam: -1 }, win: { you: 52, dan: 36, priya: 6, tom: 4, josh: 2 } },
+  { time: '17:20', text: 'Haaland goal · MCI v BOU', d: { dan: 10, you: 5, tom: 5, matt: 5 }, win: { you: 40, dan: 49, priya: 6, tom: 3, josh: 2 } },
+  { time: '17:24', text: 'Salah assist · LIV v CHE', d: { you: 6, josh: 3 }, win: { you: 58, dan: 34, priya: 5, tom: 2, josh: 1 } }
+];
+const SEP = [
+  ['You', 'Ninety Minutes FC', 241], ['Dan Mercer', 'Mercer Than Ever', 236], ['Priya Shah', 'Saka Potatoes', 230], ['Josh Reid', 'Reid Between the Lines', 222],
+  ['Tom Ellis', 'Ellis Island', 219], ['Chloe Barnes', 'Barnes Storming', 210], ['Matt Okafor', 'Okafor the Win', 204], ['Sam Whitley', 'Whit Happens', 188]
+];
+function ord(n) { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }
+function first(name) { return name === 'You' ? 'you' : name.split(' ')[0]; }
+
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { step: 0, month: 'oct', sel: null }; }
+  componentDidMount() { if (this.props.liveDemo ?? true) this.startLive(); }
+  componentWillUnmount() { this.stopLive(); }
+  startLive() {
+    this.stopLive();
+    this.setState({ step: 0 });
+    this.timer = setInterval(() => {
+      const next = ((this.state && this.state.step) || 0) + 1;
+      this.setState({ step: next });
+      if (next >= EVENTS.length) this.stopLive();
+    }, 5000);
+  }
+  stopLive() { if (this.timer) { clearInterval(this.timer); this.timer = null; } }
+
+  renderVals() {
+    const st = this.state || {};
+    const step = st.step || 0;
+    const monthKey = st.month || 'oct';
+    const applied = EVENTS.slice(0, step);
+    const last = step > 0 ? EVENTS[step - 1] : null;
+    const winMap = last ? last.win : null;
+
+    const ms = BASE.map((m) => {
+      let add = 0;
+      applied.forEach((e) => { add += e.d[m.id] || 0; });
+      const win = winMap ? (winMap[m.id] || 0) : m.win;
+      return { ...m, month: m.month + add, gw: m.gw + add, win, lastDelta: last ? (last.d[m.id] || 0) : 0 };
+    });
+    const sorted = ms.slice().sort((a, b) => b.month - a.month);
+    let prevPts = null, prevRank = 0;
+    sorted.forEach((m, i) => { m.rank = m.month === prevPts ? prevRank : i + 1; prevPts = m.month; prevRank = m.rank; });
+    const leader = sorted[0];
+    const second = sorted[1];
+
+    const rows = sorted.map((m) => {
+      const isYou = m.id === 'you';
+      const gap = m.rank === 1 ? '+' + (m.month - second.month) + ' clear' : '−' + (leader.month - m.month);
+      return {
+        rank: m.rank, name: m.name, gw: m.gw, month: m.month, gap,
+        gapC: m.rank === 1 ? '#11704a' : '#4f5f56',
+        leftStr: m.left === 0 ? 'all played' : m.left + ' to play',
+        up: m.rank < m.prev, down: m.rank > m.prev,
+        winW: Math.max(m.win, 1) + '%', winC: isYou ? '#11704a' : (m.win > 0 ? '#7f9086' : '#e2e8e1'),
+        bg: isYou ? '#e2f0e4' : '#ffffff', bar: isYou ? 'inset 4px 0 0 #b7f34a' : 'none',
+        hasDelta: m.lastDelta !== 0, deltaStr: (m.lastDelta > 0 ? '+' : '−') + Math.abs(m.lastDelta),
+        flashClass: m.lastDelta !== 0 ? 'flash' : '',
+        aria: ord(m.rank) + ', ' + m.name + ', ' + m.month + ' net, gameweek ' + m.gw + ', ' + m.win + '% to win',
+        open: () => this.setState({ sel: m.id })
+      };
+    });
+
+    const you = ms.find((m) => m.id === 'you');
+    let heroLine;
+    if (you.rank === 1) heroLine = "You're top, " + (you.month - second.month) + ' pts clear of ' + first(second.name);
+    else heroLine = "You're " + ord(you.rank) + ', ' + (leader.month - you.month) + ' pts behind ' + first(leader.name);
+
+    const topWin = ms.slice().sort((a, b) => b.win - a.win);
+    const colours = { you: '#b7f34a' };
+    const greys = ['#eef5ef', '#a3b6aa', '#5d7a6b'];
+    let gi = 0;
+    const segs = [];
+    let rest = 100;
+    topWin.slice(0, 3).forEach((m) => {
+      const c = colours[m.id] || greys[gi++];
+      segs.push({ w: m.win + '%', c, label: m.id === 'you' ? 'You' : first(m.name), pct: m.win + '%' });
+      rest -= m.win;
+    });
+    if (rest > 0) segs.push({ w: rest + '%', c: '#2a3d34', label: 'Others', pct: rest + '%' });
+
+    const selM = st.sel ? ms.find((m) => m.id === st.sel) : null;
+    const sel = selM ? {
+      name: selM.name, team: selM.team, init: selM.init, gw: selM.gw, month: selM.month,
+      eyebrow: ord(selM.rank).toUpperCase() + ' IN OCTOBER · ' + selM.left + ' TO PLAY',
+      hitsStr: selM.hits ? '−' + selM.hits + ' pts' : 'None',
+      winStr: selM.win + '%',
+      toPlay: selM.toPlay, none: selM.toPlay.length === 0,
+      hasDiffs: selM.diffs.length > 0,
+      diffs: selM.diffs.map((d) => ({ ...d, bg: d.tone === 'neg' ? '#fbe6e2' : '#e2f0e4', c: d.tone === 'neg' ? '#b0362a' : '#11704a' }))
+    } : { name: '', team: '', init: '', gw: 0, month: 0, eyebrow: '', hitsStr: '', winStr: '', toPlay: [], none: false, hasDiffs: false, diffs: [] };
+
+    let ev;
+    if (last) {
+      const hits = Object.keys(last.d).map((id) => {
+        const n = id === 'you' ? 'you' : first(BASE.find((b) => b.id === id).name);
+        const v = last.d[id];
+        return (v > 0 ? '+' : '−') + Math.abs(v) + ' ' + n;
+      });
+      ev = { time: last.time, text: last.text, impact: hits.join(' · ') };
+    } else ev = START;
+
+    const mk = (key, label, live) => ({
+      label, live, selected: monthKey === key ? 'true' : 'false',
+      bg: monthKey === key ? '#ffffff' : 'transparent',
+      shadow: monthKey === key ? '0 1px 2px rgba(11,20,16,.12)' : 'none',
+      pick: () => this.setState({ month: key })
+    });
+
+    return {
+      months: [mk('sep', 'Sep', false), mk('oct', 'Oct', true), mk('nov', 'Nov', false)],
+      isOct: monthKey === 'oct', isSep: monthKey === 'sep', isNov: monthKey === 'nov',
+      heroLine,
+      you: { gw: you.gw, left: you.left, winStr: you.win + '%' },
+      winSegs: segs,
+      winAria: 'Chance to win October: ' + segs.map((s) => s.label + ' ' + s.pct).join(', '),
+      ev, ended: step >= EVENTS.length,
+      replay: () => this.startLive(),
+      rows,
+      sepRows: SEP.map((s, i) => ({ rank: i + 1, name: s[0], team: s[1], pts: s[2], bg: s[0] === 'You' ? '#e2f0e4' : '#ffffff' })),
+      sheetOpen: !!selM, sel,
+      close: () => this.setState({ sel: null })
+    };
+  }
+}
+</script>
+</body>
+</html>

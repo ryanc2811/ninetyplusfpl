@@ -245,6 +245,63 @@ export class OfficialFplLeagueProvider implements FplLeagueProvider {
     };
   }
 
+  /**
+   * Finds managers in a league by team or manager name.
+   *
+   * The official API has no team search of its own, so this pages the public
+   * standings and filters them here. Pages are capped: a search is a
+   * convenience, not a reason to walk a league of a million entries.
+   */
+  async searchEntries(
+    leagueId: number,
+    query: string,
+    maxPages = 20,
+  ): Promise<{
+    name: string;
+    matches: LeagueStandingEntry[];
+    scanned: number;
+    truncated: boolean;
+  }> {
+    const needle = query.trim().toLowerCase();
+    const matches: LeagueStandingEntry[] = [];
+    let name = `League ${leagueId}`;
+    let scanned = 0;
+    let page = 1;
+    let hasNext = true;
+
+    while (hasNext && page <= maxPages && matches.length < 25) {
+      const data = await fetchJson<RawStandingsPage>(
+        `${BASE}/leagues-classic/${leagueId}/standings/?page_standings=${page}`,
+        900,
+      );
+      name = String(data.league?.name ?? name);
+      for (const result of data.standings?.results ?? []) {
+        scanned += 1;
+        const teamName = String(result.entry_name ?? "");
+        const managerName = String(result.player_name ?? "");
+        if (
+          !needle
+          || teamName.toLowerCase().includes(needle)
+          || managerName.toLowerCase().includes(needle)
+        ) {
+          matches.push({
+            entryId: numeric(result.entry),
+            teamName,
+            managerName,
+            rank: numeric(result.rank),
+            lastRank: numeric(result.last_rank),
+            total: numeric(result.total),
+            eventTotal: numeric(result.event_total),
+          });
+        }
+      }
+      hasNext = Boolean(data.standings?.has_next);
+      page += 1;
+    }
+
+    return { name, matches: matches.slice(0, 25), scanned, truncated: hasNext };
+  }
+
   async loadManagerSeasons(entries: LeagueStandingEntry[]): Promise<ManagerSeason[]> {
     return mapWithConcurrency(entries, this.concurrency, async (entry) => {
       try {

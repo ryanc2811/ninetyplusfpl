@@ -7,6 +7,7 @@ import {
   monthlyResults,
   monthlyStandings,
   monthWindows,
+  upcomingMonthWindows,
   type EventStatus,
   type RawPhase,
 } from "../lib/league-insights.ts";
@@ -128,6 +129,88 @@ test("tied managers share a rank and the next rank skips", () => {
   const august = monthWindows(phases, events(2)).find((window) => window.name === "August")!;
   const standings = monthlyStandings(august, seasons);
   assert.deepEqual(standings.map((row) => row.rank), [1, 1, 3]);
+});
+
+test("rank movement compares against the standing before the latest gameweek", () => {
+  const seasons = [
+    // Alpha led after GW3; Bravo overtakes on the latest scored gameweek.
+    season(1, "Alpha", [week({ event: 3, points: 80 }), week({ event: 4, points: 30 })]),
+    season(2, "Bravo", [week({ event: 3, points: 60 }), week({ event: 4, points: 70 })]),
+    season(3, "Charlie", [week({ event: 3, points: 40 }), week({ event: 4, points: 40 })]),
+  ];
+  const september = monthWindows(phases, events(4)).find((w) => w.name === "September")!;
+  const standings = monthlyStandings(september, seasons);
+
+  assert.deepEqual(standings.map((row) => [row.teamName, row.rank, row.previousRank]), [
+    ["Bravo", 1, 2],
+    ["Alpha", 2, 1],
+    ["Charlie", 3, 3],
+  ]);
+});
+
+test("nothing has moved while a month has only one scored gameweek", () => {
+  const seasons = [
+    season(1, "Alpha", [week({ event: 3, points: 80 })]),
+    season(2, "Bravo", [week({ event: 3, points: 60 })]),
+  ];
+  const september = monthWindows(phases, events(3)).find((w) => w.name === "September")!;
+  for (const row of monthlyStandings(september, seasons)) {
+    assert.equal(row.previousRank, null);
+  }
+});
+
+test("movement is measured net of hits, like the standing itself", () => {
+  const seasons = [
+    season(1, "Alpha", [week({ event: 3, points: 60 }), week({ event: 4, points: 60, transferCost: 12 })]),
+    season(2, "Bravo", [week({ event: 3, points: 55 }), week({ event: 4, points: 55 })]),
+  ];
+  const september = monthWindows(phases, events(4)).find((w) => w.name === "September")!;
+  const standings = monthlyStandings(september, seasons);
+  // Alpha scored more in both weeks but a −12 hit drops them behind.
+  assert.deepEqual(standings.map((row) => [row.teamName, row.netPoints, row.rank, row.previousRank]), [
+    ["Bravo", 110, 1, 2],
+    ["Alpha", 108, 2, 1],
+  ]);
+});
+
+test("each standing carries the month's gameweeks in order", () => {
+  const seasons = [
+    season(1, "Alpha", [
+      week({ event: 4, points: 55, transferCost: 4 }),
+      week({ event: 3, points: 62 }),
+    ]),
+  ];
+  const september = monthWindows(phases, events(4)).find((w) => w.name === "September")!;
+  const [alpha] = monthlyStandings(september, seasons);
+  assert.deepEqual(alpha.gameweeks, [
+    { event: 3, points: 62, netPoints: 62 },
+    { event: 4, points: 55, netPoints: 51 },
+  ]);
+});
+
+test("a gameweek in progress counts toward the month as soon as it is scored", () => {
+  const seasons = [
+    season(1, "Alpha", [week({ event: 3, points: 50 }), week({ event: 4, points: 20 })]),
+    season(2, "Bravo", [week({ event: 3, points: 50 })]),
+  ];
+  // September runs GW3-5, so with GW4 scored the month is live, not complete.
+  const september = monthWindows(phases, events(4)).find((w) => w.name === "September")!;
+  assert.equal(september.complete, false);
+  assert.equal(september.current, true);
+
+  const standings = monthlyStandings(september, seasons);
+  assert.deepEqual(standings.map((row) => [row.teamName, row.netPoints, row.gameweeksCounted]), [
+    ["Alpha", 70, 2],
+    ["Bravo", 50, 1],
+  ]);
+});
+
+test("upcoming months are the windows the season has not reached", () => {
+  const upcoming = upcomingMonthWindows(phases, events(3));
+  assert.deepEqual(upcoming.map((month) => month.name), ["October"]);
+  assert.equal(upcoming[0].startEvent, 6);
+  // Once October has a scored gameweek it is no longer upcoming.
+  assert.deepEqual(upcomingMonthWindows(phases, events(6)).map((m) => m.name), []);
 });
 
 // --- badges --------------------------------------------------------------

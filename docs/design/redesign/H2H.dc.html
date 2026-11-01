@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Head-to-head — You v Dan</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;800&amp;family=Geist+Mono:wght@500;600&amp;family=Instrument+Serif&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#11704a}a:hover{color:#0b1410}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid #11704a;outline-offset:2px}
+</style>
+</helmet>
+<div style="width: 390px; height: 1180px; display: flex; flex-direction: column; background: #f3f5f0; color: #0b1410; font-family: Geist, ui-sans-serif, system-ui, sans-serif; font-variant-numeric: tabular-nums">
+
+  <header style="flex: none; padding: 8px 16px; background: rgba(243,245,240,.9); border-bottom: 1px solid #d6ded5; display: flex; align-items: center; gap: 8px">
+    <a href="Main.dc.html" aria-label="Back to Leagues" style="width: 44px; height: 44px; margin-left: -10px; display: flex; align-items: center; justify-content: center; color: #0b1410; border-radius: 10px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></a>
+    <div style="display: flex; flex-direction: column">
+      <span style="font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: .08em; font-weight: 500; color: #4f5f56">GW 10 · LIVE · OCTOBER</span>
+      <h1 style="margin: 0; font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: 28px; line-height: 32px">You v Dan</h1>
+    </div>
+  </header>
+
+  <main style="flex: 1; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+
+    <!-- Scoreboard -->
+    <section aria-label="Live score" style="background: #0b1410; color: #eef5ef; border-radius: 20px; padding: 16px; display: flex; flex-direction: column; gap: 16px">
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end">
+        <div style="display: flex; flex-direction: column; gap: 2px">
+          <span style="font-size: 13px; color: #a3b6aa">You</span>
+          <span style="font-family: 'Instrument Serif', Georgia, serif; font-size: 48px; line-height: 48px">61</span>
+        </div>
+        <div style="text-align: center; font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: .08em; color: #a3b6aa; padding-bottom: 8px">GW 10</div>
+        <div style="display: flex; flex-direction: column; gap: 2px; align-items: flex-end">
+          <span style="font-size: 13px; color: #a3b6aa">Dan</span>
+          <span style="font-family: 'Instrument Serif', Georgia, serif; font-size: 48px; line-height: 48px">52</span>
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding-top: 12px; border-top: 1px solid #25382f; font-family: 'Geist Mono', monospace; font-size: 15px; font-weight: 600">
+        <span>227</span><span style="text-align: center; font-size: 12px; font-weight: 500; color: #a3b6aa; letter-spacing: .08em">OCT NET</span><span style="text-align: right">231</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <div style="display: flex; justify-content: space-between; font-size: 12px; color: #a3b6aa"><span>You 38%</span><span>Chance to win October</span><span>Dan 41%</span></div>
+        <div role="img" aria-label="You 38 percent, Dan 41 percent, others 21 percent" style="display: flex; height: 10px; gap: 2px; border-radius: 9999px; overflow: hidden">
+          <span style="width: 38%; background: #b7f34a"></span><span style="width: 21%; background: #2a3d34"></span><span style="width: 41%; background: #eef5ef"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Swing summary -->
+    <section style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+      <div style="background: #ffffff; border: 1px solid #d6ded5; border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 4px">
+        <span style="font-size: 12px; color: #4f5f56">Your edge still to play</span>
+        <span style="font-family: 'Instrument Serif', Georgia, serif; font-size: 32px; line-height: 36px">+9.4</span>
+        <span style="font-size: 12px; color: #4f5f56">xP · Salah (C)</span>
+      </div>
+      <div style="background: #ffffff; border: 1px solid #d6ded5; border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 4px">
+        <span style="font-size: 12px; color: #4f5f56">Dan's edge still to play</span>
+        <span style="font-family: 'Instrument Serif', Georgia, serif; font-size: 32px; line-height: 36px">+7.0</span>
+        <span style="font-size: 12px; color: #4f5f56">xP · Haaland's extra ×1</span>
+      </div>
+    </section>
+
+    <!-- View switch -->
+    <div role="tablist" aria-label="Comparison view" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 4px; background: #eef2ec; border-radius: 10px">
+      <sc-for list="{{ views }}" as="v" hint-placeholder-count="2">
+        <button type="button" role="tab" aria-selected="{{ v.sel }}" onClick="{{ v.pick }}" style="min-height: 40px; border: 0; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; background: {{ v.bg }}; box-shadow: {{ v.sh }}">{{ v.label }}</button>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{ isDiff }}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <sc-for list="{{ groups }}" as="g" hint-placeholder-count="3">
+          <section style="background: #ffffff; border: 1px solid #d6ded5; border-radius: 14px; overflow: hidden">
+            <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: #eef2ec; font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: .08em; color: #4f5f56"><span>{{ g.title }}</span><span>{{ g.net }}</span></div>
+            <sc-for list="{{ g.rows }}" as="p" hint-placeholder-count="2">
+              <div style="min-height: 64px; display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-top: 1px solid #d6ded5">
+                <span style="width: 40px; height: 40px; flex: none; border-radius: 9999px; background: {{ p.shirt }}; color: #0b1410; display: flex; align-items: center; justify-content: center; font-family: 'Geist Mono', monospace; font-size: 12px; font-weight: 600; border: 1px solid #d6ded5">{{ p.pos }}</span>
+                <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+                  <span style="display: flex; align-items: center; gap: 6px; font-size: 16px; font-weight: 600">{{ p.name }}
+                    <sc-if value="{{ p.cap }}" hint-placeholder-val="{{ false }}"><span aria-label="Captain" style="width: 20px; height: 20px; border-radius: 9999px; background: #b7f34a; color: #0b1410; font-size: 12px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center">C</span></sc-if>
+                  </span>
+                  <span style="font-size: 13px; color: #4f5f56">{{ p.meta }}</span>
+                </span>
+                <span style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px">
+                  <span style="font-family: 'Geist Mono', monospace; font-size: 17px; font-weight: 600">{{ p.pts }}</span>
+                  <span style="font-size: 12px; font-weight: 500; padding: 1px 8px; border-radius: 9999px; background: {{ p.pillBg }}; color: {{ p.pillC }}">{{ p.status }}</span>
+                </span>
+              </div>
+            </sc-for>
+          </section>
+        </sc-for>
+
+        <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: #eef2ec; border-radius: 14px">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4f5f56" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 7h12M8 12h12M8 17h12M4 7h.01M4 12h.01M4 17h.01"/></svg>
+          <span style="flex: 1; font-size: 15px">7 shared starters · 31 pts each</span>
+          <span style="font-size: 13px; color: #4f5f56">They cancel out</span>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isFull }}" hint-placeholder-val="{{ false }}">
+      <section style="background: #ffffff; border: 1px solid #d6ded5; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 8px">
+        <span style="font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: .08em; color: #4f5f56">FULL SQUADS</span>
+        <p style="margin: 0; font-size: 15px; line-height: 22px">Both XIs side by side on a split pitch, shared players greyed. Use Differentials for the live race — it only shows the players that can change the result.</p>
+      </section>
+    </sc-if>
+
+    <!-- Alerts -->
+    <section style="background: #ffffff; border: 1px solid #d6ded5; border-radius: 14px; padding: 4px 16px">
+      <label style="min-height: 56px; display: flex; align-items: center; gap: 12px; cursor: pointer">
+        <span style="flex: 1; display: flex; flex-direction: column"><span style="font-size: 16px; font-weight: 600">Alert me on lead changes</span><span style="font-size: 13px; color: #4f5f56">Push when you and Dan swap places</span></span>
+        <input type="checkbox" checked="{{ alerts }}" onChange="{{ toggle }}" style="position: absolute; opacity: 0; width: 1px; height: 1px">
+        <span aria-hidden="true" style="width: 48px; height: 28px; border-radius: 9999px; padding: 3px; box-sizing: border-box; display: flex; justify-content: {{ knobJ }}; background: {{ trackBg }}; transition: background 220ms"><span style="width: 22px; height: 22px; border-radius: 9999px; background: #ffffff; box-shadow: 0 1px 2px rgba(11,20,16,.3)"></span></span>
+      </label>
+    </section>
+  </main>
+
+  <nav aria-label="Main" style="flex: none; height: 64px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: rgba(243,245,240,.95); border-top: 1px solid #d6ded5">
+    <a href="Home.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #4f5f56; text-decoration: none; font-size: 12px; font-weight: 500"><span style="width: 56px; height: 30px; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></span>Home</a>
+    <a href="Squad.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #4f5f56; text-decoration: none; font-size: 12px; font-weight: 500"><span style="width: 56px; height: 30px; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 3 6l2 4 2-1v12h10V9l2 1 2-4-5-3a4 4 0 0 1-8 0z"/></svg></span>Squad</a>
+    <a href="Players.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #4f5f56; text-decoration: none; font-size: 12px; font-weight: 500"><span style="width: 56px; height: 30px; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span>Players</a>
+    <a href="Chips.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #4f5f56; text-decoration: none; font-size: 12px; font-weight: 500"><span style="width: 56px; height: 30px; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></span>Chips</a>
+    <a href="Main.dc.html" aria-current="page" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #0b1410; text-decoration: none; font-size: 12px; font-weight: 600"><span style="width: 56px; height: 30px; border-radius: 9999px; background: #b7f34a; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg></span>Leagues</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1180}}'>
+const SHIRT = { GK: '#f2a46b', DEF: '#f4f7f3', MID: '#b7f34a', FWD: '#ece4d1' };
+function row(name, pos, meta, pts, status, cap) {
+  const live = status === 'To play' || status === 'Live';
+  return { name, pos, meta, pts, status, cap: !!cap, shirt: SHIRT[pos],
+    pillBg: live ? '#fbeed3' : '#eef2ec', pillC: live ? '#865500' : '#4f5f56' };
+}
+const GROUPS = [
+  { title: 'CAPTAINCY', net: 'DECIDES IT', rows: [
+    row('Salah', 'MID', 'Yours ×2 · Dan doesn’t own · LIV v CHE 16:30', '9.4 xP', 'To play', true),
+    row('Haaland', 'FWD', 'Dan ×2 · you ×1 · MCI v BOU 16:30', '7.0 xP', 'To play', false)
+  ] },
+  { title: 'ONLY YOU', net: '+15 PTS', rows: [
+    row('Saka', 'MID', 'ARS 3–1 WHU · goal, assist', '13', 'Played'),
+    row('Mbeumo', 'MID', 'MUN 0–0 AVL', '2', 'Played')
+  ] },
+  { title: 'ONLY DAN', net: '+8 PTS', rows: [
+    row('Isak', 'FWD', 'NEW 1–1 BHA', '2', 'Played'),
+    row('Mykolenko', 'DEF', 'EVE 2–0 FUL · clean sheet', '6', 'Played')
+  ] }
+];
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { view: 'diff', alerts: true }; }
+  renderVals() {
+    const st = this.state || {};
+    const view = st.view || 'diff';
+    const alerts = st.alerts !== false;
+    const mk = (key, label) => ({ label, sel: view === key ? 'true' : 'false', bg: view === key ? '#ffffff' : 'transparent', sh: view === key ? '0 1px 2px rgba(11,20,16,.12)' : 'none', pick: () => this.setState({ view: key }) });
+    return {
+      views: [mk('diff', 'Differentials'), mk('full', 'Full squads')],
+      isDiff: view === 'diff', isFull: view === 'full',
+      groups: GROUPS,
+      alerts,
+      trackBg: alerts ? '#11704a' : '#7f9086',
+      knobJ: alerts ? 'flex-end' : 'flex-start',
+      toggle: () => this.setState({ alerts: !alerts })
+    };
+  }
+}
+</script>
+</body>
+</html>

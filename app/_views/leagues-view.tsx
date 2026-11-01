@@ -1,229 +1,338 @@
 "use client";
 
-import { BADGE_ICONS, useAppState } from "../_state/app-state";
+import { useState } from "react";
+import type { LeagueInsightsResponse } from "../../lib/contracts/leagues";
+import { AlertToggles, BadgeGrid, MonthsWon, SeasonMonths } from "../_components/leagues/awards";
+import { ConnectCard } from "../_components/leagues/connect";
+import { gameweekRangeLabel } from "../_components/leagues/format";
+import { LeagueSwitcher } from "../_components/leagues/league-switcher";
+import { ManagerSheet } from "../_components/leagues/manager-sheet";
+import { MonthTabs, monthChoices } from "../_components/leagues/month-tabs";
+import { MonthHero } from "../_components/leagues/month-hero";
+import { RaceChart } from "../_components/leagues/race-chart";
+import { StandingsList, StandingsTable, standingFor } from "../_components/leagues/standings";
+import { mergeLiveIntoMonth } from "../../lib/live-standings";
+import { updatedAgoLabel, useLiveLeague } from "../_state/use-live-league";
+import {
+  Button,
+  Card,
+  CardHead,
+  EmptyState,
+  LiveDot,
+  SegmentedControl,
+  Skeleton,
+  SkeletonRows,
+} from "../_components/ui";
+import { useAppState } from "../_state/app-state";
+
+function LoadingLeague() {
+  return (
+    <div className="flex flex-col gap-3">
+      <Skeleton height={132} className="rounded-lg" />
+      <Card padded={false}>
+        <SkeletonRows rows={6} />
+      </Card>
+    </div>
+  );
+}
+
+/** The live strip: what the feed knows, and how long ago it knew it. */
+function LiveStrip({
+  event,
+  summary,
+  secondsAgo,
+  onRefresh,
+}: {
+  event: number;
+  summary: string;
+  secondsAgo: number | null;
+  onRefresh: () => void;
+}) {
+  return (
+    <div
+      aria-live="polite"
+      className="flex items-center gap-3 rounded-md border border-border bg-surface p-3 shadow-[var(--shadow-sm)]"
+    >
+      <LiveDot />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <span className="t-headline">
+          GW {event} live · {summary}
+        </span>
+        <span className="t-body-sm text-text-muted">{updatedAgoLabel(secondsAgo)}</span>
+      </div>
+      <Button size="sm" onClick={onRefresh}>
+        Refresh
+      </Button>
+    </div>
+  );
+}
+
+function ThisMonth({
+  insights,
+  youEntryId,
+  leagueId,
+}: {
+  insights: LeagueInsightsResponse;
+  youEntryId: number | null;
+  leagueId: number | null;
+}) {
+  const choices = monthChoices(insights.months, insights.upcomingMonths);
+  const [monthKey, setMonthKey] = useState<string | null>(null);
+  const [sheetEntryId, setSheetEntryId] = useState<number | null>(null);
+  const live = useLiveLeague(leagueId);
+
+  const active =
+    choices.find((choice) => choice.key === monthKey)
+    ?? choices.find((choice) => choice.kind === "played" && choice.result.month.current)
+    ?? choices[choices.length - 1];
+
+  if (!active) {
+    return (
+      <Card>
+        <EmptyState icon="calendar" title="No months to show yet">
+          Monthly awards unlock once Gameweek 1 has been scored and checked.
+        </EmptyState>
+      </Card>
+    );
+  }
+
+  // History is authoritative once a Gameweek is checked, so the live feed only
+  // folds in while it is still provisional.
+  const liveIsRelevant = Boolean(live.data?.started && !live.data.dataChecked);
+  const liveView = liveIsRelevant ? { byEntry: live.byEntry, deltas: live.deltas } : undefined;
+  const played = active.kind === "played" ? active.result : null;
+  const result =
+    played && liveIsRelevant && live.data
+      ? mergeLiveIntoMonth(
+          played,
+          new Map(
+            live.data.managers.map((manager) => [
+              manager.entryId,
+              { points: manager.points, netPoints: manager.netPoints },
+            ]),
+          ),
+          live.data.event,
+        )
+      : played;
+
+  /**
+   * The connected manager is not always in the analysed sample of a big
+   * league, so fall back to the league's own state rather than reporting
+   * "everyone has played" from an absence of data.
+   */
+  const yourLive = youEntryId === null ? undefined : live.byEntry.get(youEntryId);
+  const managersPlaying = (live.data?.managers ?? []).filter(
+    (manager) => manager.playersToPlay > 0,
+  ).length;
+  const liveSummary = yourLive
+    ? yourLive.playersToPlay > 0
+      ? `${yourLive.playersToPlay} of your players still to play`
+      : "all your players have played"
+    : managersPlaying > 0
+      ? `${managersPlaying} ${managersPlaying === 1 ? "manager has" : "managers have"} players still to play`
+      : "every manager here has played";
+
+  const liveStrip =
+    liveIsRelevant && live.data ? (
+      <LiveStrip
+        event={live.data.event}
+        summary={liveSummary}
+        secondsAgo={live.secondsAgo}
+        onRefresh={live.refresh}
+      />
+    ) : null;
+
+  return (
+    <div className="flex flex-col gap-3">
+      {choices.length > 1 && (
+        <MonthTabs
+          className="expanded:max-w-[320px]"
+          choices={choices}
+          value={active.key}
+          onChange={setMonthKey}
+        />
+      )}
+
+      {active.kind === "upcoming" ? (
+        <Card>
+          <EmptyState
+            icon="calendar"
+            title={`${active.month.name} starts in GW ${active.month.startEvent}`}
+            action={<Button variant="primary" href="/squad">{`Plan GW ${active.month.startEvent}`}</Button>}
+          >
+            Everyone resets to 0 at the deadline. {gameweekRangeLabel(active.month)} count towards{" "}
+            {active.month.name}.
+          </EmptyState>
+        </Card>
+      ) : result ? (
+        <>
+          {liveStrip}
+          <MonthHero result={result} youEntryId={youEntryId} />
+          <div className="flex flex-col gap-3 expanded:grid expanded:grid-cols-[minmax(0,1fr)_400px] expanded:items-start">
+            <div className="flex flex-col gap-3">
+              <StandingsList
+                result={result}
+                youEntryId={youEntryId}
+                live={liveView}
+                onSelect={setSheetEntryId}
+              />
+              <StandingsTable
+                result={result}
+                youEntryId={youEntryId}
+                live={liveView}
+                onSelect={setSheetEntryId}
+              />
+            </div>
+            <Card className="hidden expanded:block">
+              <CardHead
+                title="The race"
+                aside={<span className="t-body-sm text-text-muted">Cumulative net</span>}
+              />
+              <div className="mt-3">
+                <RaceChart result={result} youEntryId={youEntryId} />
+              </div>
+            </Card>
+          </div>
+          <ManagerSheet
+            result={result}
+            row={standingFor(result, sheetEntryId)}
+            youEntryId={youEntryId}
+            leagueId={leagueId}
+            live={sheetEntryId === null ? null : live.byEntry.get(sheetEntryId) ?? null}
+            onClose={() => setSheetEntryId(null)}
+          />
+        </>
+      ) : null}
+    </div>
+  );
+}
 
 /** Leagues: monthly awards and manager insight for the people you actually play against. */
 export function LeaguesView() {
   const {
-    connectError,
-    connectStatus,
-    connectTeam,
-    currentMonth,
-    disconnectTeam,
-    leagueInsights,
-    leagueStatus,
     manager,
     managerLeagues,
-    monthlyBadges,
-    openLeague,
-    seasonBadges,
-    selectedLeagueId,
-    setTeamIdInput,
     teamIdInput,
+    setTeamIdInput,
+    connectTeam,
+    connectStatus,
+    connectError,
+    selectedLeagueId,
+    leagueInsights,
+    leagueStatus,
+    openLeague,
+    disconnectTeam,
   } = useAppState();
+  const [tab, setTab] = useState<"month" | "season">("month");
+
+  if (!manager) {
+    return (
+      <ConnectCard
+        teamIdInput={teamIdInput}
+        setTeamIdInput={setTeamIdInput}
+        connect={(input) => void connectTeam(input)}
+        status={connectStatus}
+        error={connectError}
+      />
+    );
+  }
+
+  const youEntryId = manager.entryId;
+  const seasonBadges = (leagueInsights?.badges ?? []).filter(
+    (badge) => badge.kind !== "manager-of-the-month",
+  );
 
   return (
-      <div className="content">
-        {!manager ? (
-          <article className="panel connect-panel">
-            <span className="eyebrow">CONNECT YOUR SQUAD</span>
-            <h2>Link your real FPL mini-leagues</h2>
-            <p className="body-copy">
-              Enter your FPL team ID to pull in your classic leagues and see monthly awards,
-              bench regret and hit tax across the managers you actually play against.
-              Find it in the URL of your FPL <b>Points</b> page:
-              {" "}<code>fantasy.premierleague.com/entry/<b>1234567</b>/event/1</code>.
-            </p>
-            <form
-              className="connect-form"
-              onSubmit={(event) => { event.preventDefault(); void connectTeam(teamIdInput); }}
-            >
-              <label className="picker-search">
-                <span>#</span>
-                <input
-                  value={teamIdInput}
-                  onChange={(event) => setTeamIdInput(event.target.value)}
-                  placeholder="Your FPL team ID, e.g. 1234567"
-                  inputMode="numeric"
-                  aria-label="FPL team ID"
-                />
-              </label>
-              <button className="primary-button" type="submit" disabled={connectStatus === "loading"}>
-                {connectStatus === "loading" ? "Connecting…" : "Connect"} <span>↗</span>
-              </button>
-            </form>
-            {connectError && <p className="rule-error">! {connectError}</p>}
-            <p className="model-note">
-              NINETY+ never asks for your FPL password. A team ID is public information and is
-              stored only in this browser.
-            </p>
-          </article>
-        ) : (
-          <>
-            <section className="signal-strip league-strip">
-              <div><span className="live-dot" /> CONNECTED</div>
-              <p>
-                <b>{manager.teamName}</b> · {manager.managerName}
-                {manager.overallPoints !== null && <> · {manager.overallPoints} pts overall</>}
-                {manager.overallRank !== null && <> · rank {manager.overallRank.toLocaleString()}</>}
-              </p>
-              <button onClick={disconnectTeam}>Disconnect</button>
-            </section>
-
-            <div className="league-layout">
-              <aside className="panel league-list">
-                <span className="eyebrow">YOUR LEAGUES</span>
-                {managerLeagues.filter((league) => league.type === "invitational").length > 0 && (
-                  <div className="league-group">
-                    <small>Mini-leagues</small>
-                    {managerLeagues.filter((league) => league.type === "invitational").map((league) => (
-                      <button
-                        key={league.id}
-                        className={selectedLeagueId === league.id ? "league-item active" : "league-item"}
-                        onClick={() => void openLeague(league.id)}
-                      >
-                        <b>{league.name}</b>
-                        <small>{league.rank ? `Rank ${league.rank}` : "Not yet ranked"}{league.entryCount ? ` of ${league.entryCount}` : ""}</small>
-                      </button>
-                    ))}
-                  </div>
-                )}
-                <div className="league-group">
-                  <small>Auto-joined</small>
-                  {managerLeagues.filter((league) => league.type === "system").map((league) => (
-                    <button
-                      key={league.id}
-                      className={selectedLeagueId === league.id ? "league-item active" : "league-item"}
-                      onClick={() => void openLeague(league.id)}
-                    >
-                      <b>{league.name}</b>
-                      <small>{league.rank ? `Rank ${league.rank}` : "Not yet ranked"}</small>
-                    </button>
-                  ))}
-                </div>
-              </aside>
-
-              <div className="league-main">
-                {leagueStatus === "loading" && (
-                  <article className="panel"><div className="picker-empty">Loading league insights…</div></article>
-                )}
-                {leagueStatus === "error" && (
-                  <article className="panel"><div className="picker-empty">That league could not be loaded. It may be private.</div></article>
-                )}
-                {leagueStatus === "idle" && !leagueInsights && (
-                  <article className="panel"><div className="picker-prompt"><span>←</span><b>Choose a league</b><p>Monthly awards and manager insights will appear here.</p></div></article>
-                )}
-
-                {leagueInsights && (
-                  <>
-                    <article className="panel">
-                      <div className="panel-head">
-                        <div><span className="eyebrow">{leagueInsights.league.type === "invitational" ? "MINI-LEAGUE" : "AUTO-JOINED LEAGUE"}</span><h2>{leagueInsights.league.name}</h2></div>
-                        <span className="confidence">{leagueInsights.league.analysedCount} managers analysed</span>
-                      </div>
-                      {leagueInsights.completedGameweeks === 0 ? (
-                        <div className="preseason-note">
-                          <b>The season has not started yet.</b>
-                          <p>
-                            Monthly awards unlock once Gameweek 1 is scored.
-                            {leagueInsights.league.entryCount > 0
-                              ? ` ${leagueInsights.league.entryCount} ${leagueInsights.league.entryCount === 1 ? "manager is" : "managers are"} ready to go.`
-                              : " Standings appear here once the official feed ranks this league."}
-                          </p>
-                          <div className="badge-slots">
-                            {["August", "September", "October", "November"].map((month) => (
-                              <div className="badge-slot" key={month}><i>★</i><b>{month}</b><small>Locked</small></div>
-                            ))}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="explain-stat"><span>Gameweeks scored</span><b>{leagueInsights.completedGameweeks}</b></div>
-                      )}
-                      {leagueInsights.league.truncated && (
-                        <p className="model-note">This league is larger than the analysed sample. The top {leagueInsights.league.analysedCount} managers are shown.</p>
-                      )}
-                    </article>
-
-                    {monthlyBadges.length > 0 && (
-                      <article className="panel">
-                        <div className="panel-head"><div><span className="eyebrow">HONOURS BOARD</span><h2>Manager of the Month</h2></div><span className="subtle">Net of transfer hits</span></div>
-                        <div className="badge-grid">
-                          {monthlyBadges.map((badge) => (
-                            <div className="badge-card" key={`${badge.period}-${badge.entryId}`}>
-                              <i>★</i>
-                              <span className="badge-month">{badge.period}</span>
-                              <b>{badge.teamName}</b>
-                              <small>{badge.managerName}</small>
-                              <strong>{badge.value} pts</strong>
-                              <p>{badge.detail}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </article>
-                    )}
-
-                    {currentMonth && (
-                      <article className="panel">
-                        <div className="panel-head">
-                          <div><span className="eyebrow">{currentMonth.month.complete ? "FINAL STANDINGS" : "THIS MONTH'S RACE"}</span><h2>{currentMonth.month.name}</h2></div>
-                          <span className="subtle">GW{currentMonth.month.startEvent}–{currentMonth.month.stopEvent} · {currentMonth.month.gameweeksPlayed} played</span>
-                        </div>
-                        <div className="month-table">
-                          <div className="month-row month-head"><span>#</span><span>Manager</span><span>Net</span><span>Gross</span><span>Hits</span><span>Bench</span></div>
-                          {currentMonth.standings.slice(0, 12).map((row) => (
-                            <div className={row.rank === 1 ? "month-row leading" : "month-row"} key={row.entryId}>
-                              <span>{row.rank === 1 ? "★" : row.rank}</span>
-                              <span><b>{row.teamName}</b><small>{row.managerName}</small></span>
-                              <span className="month-net">{row.netPoints}</span>
-                              <span>{row.grossPoints}</span>
-                              <span className={row.transferCost > 0 ? "negative" : undefined}>{row.transferCost > 0 ? `−${row.transferCost}` : "—"}</span>
-                              <span>{row.pointsOnBench}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </article>
-                    )}
-
-                    {seasonBadges.length > 0 && (
-                      <article className="panel">
-                        <div className="panel-head"><div><span className="eyebrow">SEASON AWARDS</span><h2>League character</h2></div></div>
-                        <div className="season-badge-row">
-                          {seasonBadges.map((badge) => (
-                            <div className="season-badge" key={badge.kind}>
-                              <i>{BADGE_ICONS[badge.kind] ?? "◆"}</i>
-                              <div><b>{badge.label}</b><small>{badge.teamName} · {badge.value}{badge.unit === "sd" ? " sd" : " pts"}</small><p>{badge.detail}</p></div>
-                            </div>
-                          ))}
-                        </div>
-                      </article>
-                    )}
-
-                    {leagueInsights.managers.some((row) => row.totalPoints > 0) && (
-                      <article className="panel">
-                        <div className="panel-head"><div><span className="eyebrow">MANAGER BREAKDOWN</span><h2>Season to date</h2></div></div>
-                        <div className="month-table">
-                          <div className="month-row manager-row month-head"><span>Manager</span><span>Net</span><span>Bench</span><span>Hits</span><span>Best</span><span>Swing</span><span>Months</span></div>
-                          {leagueInsights.managers.slice(0, 20).map((row) => (
-                            <div className="month-row manager-row" key={row.entryId}>
-                              <span><b>{row.teamName}</b><small>{row.managerName}</small></span>
-                              <span className="month-net">{row.totalPoints}</span>
-                              <span>{row.benchPoints}</span>
-                              <span className={row.transferCost > 0 ? "negative" : undefined}>{row.transferCost > 0 ? `−${row.transferCost}` : "—"}</span>
-                              <span>{row.bestGameweek ? `${row.bestGameweek.points}` : "—"}</span>
-                              <span>{row.consistency ?? "—"}</span>
-                              <span>{row.monthsWon > 0 ? "★".repeat(Math.min(row.monthsWon, 5)) : "—"}</span>
-                            </div>
-                          ))}
-                        </div>
-                        <p className="model-note">Net points deduct transfer costs. Swing is the standard deviation of Gameweek scores; a lower number means a steadier season.</p>
-                      </article>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-          </>
-        )}
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2 expanded:flex-row expanded:items-center expanded:justify-between">
+        <LeagueSwitcher
+          leagues={managerLeagues}
+          selectedId={selectedLeagueId}
+          selectedName={leagueInsights?.league.name ?? "Choose a league"}
+          managerCount={leagueInsights?.league.analysedCount}
+          onSelect={(id) => void openLeague(id)}
+        />
+        <div className="flex items-center gap-2">
+          <span className="t-body-sm truncate text-text-muted">
+            {manager.teamName} · {manager.managerName}
+          </span>
+          <Button size="sm" onClick={disconnectTeam}>
+            Disconnect
+          </Button>
+        </div>
       </div>
+
+      <SegmentedControl
+        className="expanded:max-w-[420px]"
+        label="League view"
+        value={tab}
+        onChange={setTab}
+        options={[
+          { value: "month", label: "This month" },
+          { value: "season", label: "Season & awards" },
+        ]}
+      />
+
+      {leagueStatus === "loading" && <LoadingLeague />}
+
+      {leagueStatus === "error" && (
+        <Card>
+          <EmptyState icon="alert" title="That league could not be loaded">
+            It may be private, or the official feed may be refusing requests right now.
+          </EmptyState>
+        </Card>
+      )}
+
+      {leagueStatus === "idle" && !leagueInsights && (
+        <Card>
+          <EmptyState icon="trophy" title="Choose a league">
+            Monthly awards and manager insight appear here once you pick one.
+          </EmptyState>
+        </Card>
+      )}
+
+      {leagueStatus === "idle" && leagueInsights && (
+        <>
+          {leagueInsights.completedGameweeks === 0 ? (
+            <Card>
+              <EmptyState
+                icon="calendar"
+                title="The season has not started yet"
+                action={<Button variant="primary" href="/squad">Plan your squad</Button>}
+              >
+                Monthly awards unlock once Gameweek 1 is scored.{" "}
+                {leagueInsights.league.entryCount > 0
+                  ? `${leagueInsights.league.entryCount} ${leagueInsights.league.entryCount === 1 ? "manager is" : "managers are"} ready to go.`
+                  : "Standings appear here once the official feed ranks this league."}
+              </EmptyState>
+            </Card>
+          ) : tab === "month" ? (
+            <ThisMonth
+              insights={leagueInsights}
+              youEntryId={youEntryId}
+              leagueId={selectedLeagueId}
+            />
+          ) : (
+            <div className="flex flex-col gap-3">
+              <SeasonMonths insights={leagueInsights} youEntryId={youEntryId} />
+              <MonthsWon badges={leagueInsights.badges} youEntryId={youEntryId} />
+              <BadgeGrid badges={seasonBadges} youEntryId={youEntryId} />
+              <AlertToggles />
+            </div>
+          )}
+
+          {leagueInsights.league.truncated && (
+            <p className="t-caption m-0 text-text-muted">
+              This league is larger than the analysed sample. The top{" "}
+              {leagueInsights.league.analysedCount} managers are shown.
+            </p>
+          )}
+          <p className="t-caption m-0 text-text-muted">
+            {leagueInsights.provenance.source} · retrieved{" "}
+            {new Date(leagueInsights.provenance.retrievedAt).toLocaleString()}
+          </p>
+        </>
+      )}
+    </div>
   );
 }

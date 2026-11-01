@@ -7,6 +7,10 @@ import { useAppState } from "../_state/app-state";
 /** The squad builder. Every edit is checked against the FPL squad rules as it happens. */
 export function SquadView() {
   const {
+    bankRemaining,
+    budget,
+    squadSource,
+    squadImportError,
     applyLineupSwap,
     assignCaptain,
     assignViceCaptain,
@@ -53,7 +57,7 @@ export function SquadView() {
           </div>
           <div className="budget-bar">
             <div><span>Spent</span><b>£{builderValidation.cost.toFixed(1)}m</b></div>
-            <div><span>In bank</span><b className={100 - builderValidation.cost >= 0 ? "lime" : "negative"}>£{(100 - builderValidation.cost).toFixed(1)}m</b></div>
+            <div><span>In bank</span><b className={bankRemaining >= 0 ? "lime" : "negative"}>£{bankRemaining.toFixed(1)}m</b></div>
             <div><span>Club cap</span><b>{Math.max(...Object.values(builderValidation.clubs))} / 3 max</b></div>
             <div className="formation-control"><label htmlFor="formation">Formation</label><select id="formation" value={formation} onChange={(event) => changeFormation(event.target.value as Formation)}>{FORMATIONS.map((item) => <option value={item} key={item}>{item}</option>)}</select></div>
             <div><span>GW1 · {gw1Strategy === "bench-boost" ? "Bench Boost" : gw1Strategy === "triple-captain" ? "Triple Captain" : "captain"}</span><b>{projectedGw1.toFixed(1)} pts</b></div>
@@ -113,7 +117,7 @@ export function SquadView() {
                 )}
                 <div className="candidate-list">
                   {builderCandidates.map((candidate) => {
-                    const error = replacementError(builderSquad, selectedSlot.id, candidate);
+                    const error = replacementError(builderSquad, selectedSlot.id, candidate, budget);
                     return (
                       <button key={candidate.id} disabled={Boolean(error)} onClick={() => chooseReplacement(candidate)} title={error ?? `Replace with ${candidate.name}`}>
                         <span className="candidate-badge">{candidate.team}</span>
@@ -135,7 +139,7 @@ export function SquadView() {
             <button className="secondary-button reset-button" onClick={resetDraft}>Rebuild for {gw1Strategy === "bench-boost" ? "GW1 Bench Boost + GW2–3" : gw1Strategy === "triple-captain" ? "GW1 Triple Captain" : "live GW1"}</button>
             <button className="text-button strategy-link" onClick={() => router.push("/chips")}>Change chip strategy →</button>
           </article>
-          <article className="panel why-card"><span className="eyebrow">FPL RULES</span><h2>Live validation</h2>{builderValidation.issues.length ? builderValidation.issues.map((issue) => <p className="rule-error" key={issue}>! {issue}</p>) : <p>2 goalkeepers · 5 defenders · 5 midfielders · 3 forwards. Budget and three-per-club limits are satisfied.</p>}<div className="explain-stat"><span>Squad size</span><b>{builderSquad.length} / 15</b></div><div className="explain-stat"><span>Data source</span><b className={live ? "positive" : ""}>{live ? "Live" : "Preview"}</b></div></article>
+          <article className="panel why-card"><span className="eyebrow">FPL RULES</span><h2>Live validation</h2>{builderValidation.issues.length ? builderValidation.issues.map((issue) => <p className="rule-error" key={issue}>! {issue}</p>) : <p>2 goalkeepers · 5 defenders · 5 midfielders · 3 forwards. Budget and three-per-club limits are satisfied.</p>}<div className="explain-stat"><span>Squad size</span><b>{builderSquad.length} / 15</b></div><div className="explain-stat"><span>Data source</span><b className={live ? "positive" : ""}>{live ? "Live" : "Preview"}</b></div><div className="explain-stat"><span>Squad</span><b>{squadSource === "fpl" ? "Your FPL team" : "Model draft"}</b></div>{squadImportError && <p className="rule-error">! {squadImportError}</p>}</article>
         </aside>
       </div>
   );

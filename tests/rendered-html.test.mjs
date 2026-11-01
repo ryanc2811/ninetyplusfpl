@@ -44,7 +44,7 @@ test("each route server-renders its own screen", async () => {
     ["/squad", /Your editable squad/],
     ["/players", /players modelled/],
     ["/chips", /Chip strategy and squad route/],
-    ["/leagues", /Link your real FPL mini-leagues/],
+    ["/leagues", /Link your real FPL team/],
   ];
 
   for (const [path, expected] of screens) {

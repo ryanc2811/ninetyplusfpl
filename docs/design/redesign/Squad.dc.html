@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Squad</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;800&amp;family=Geist+Mono:wght@500;600&amp;family=Instrument+Serif&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#11704a}a:hover{color:#0b1410}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid #b7f34a;outline-offset:2px}
+</style>
+</helmet>
+<div style="width: 390px; height: 1040px; display: flex; flex-direction: column; background: #f3f5f0; color: #0b1410; font-family: Geist, ui-sans-serif, system-ui, sans-serif; font-variant-numeric: tabular-nums">
+
+  <header style="flex: none; padding: 12px 16px 8px; background: rgba(243,245,240,.9); border-bottom: 1px solid #d6ded5; display: flex; flex-direction: column; gap: 6px">
+    <span style="font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: .08em; font-weight: 500; color: #4f5f56">GW 11 · DEADLINE SAT 11:00</span>
+    <div style="display: flex; align-items: center; justify-content: space-between">
+      <h1 style="margin: 0; font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: 28px; line-height: 32px">Squad</h1>
+      <div role="tablist" aria-label="View" style="display: flex; gap: 4px; padding: 4px; background: #eef2ec; border-radius: 10px">
+        <button type="button" role="tab" aria-selected="true" style="min-height: 36px; padding: 0 12px; border: 0; border-radius: 8px; background: #ffffff; box-shadow: 0 1px 2px rgba(11,20,16,.12); font-size: 13px; font-weight: 500">Pitch</button>
+        <button type="button" role="tab" aria-selected="false" style="min-height: 36px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; font-size: 13px; font-weight: 500">List</button>
+      </div>
+    </div>
+  </header>
+
+  <main style="flex: 1; padding: 12px 16px; display: flex; flex-direction: column; gap: 12px">
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+      <div style="padding: 10px 12px; background: #ffffff; border: 1px solid #d6ded5; border-radius: 10px; display: flex; flex-direction: column"><span style="font-size: 12px; color: #4f5f56">GW 11 xP</span><span style="font-family: 'Geist Mono', monospace; font-size: 17px; font-weight: 600; color: #11704a">58.4</span></div>
+      <div style="padding: 10px 12px; background: #ffffff; border: 1px solid #d6ded5; border-radius: 10px; display: flex; flex-direction: column"><span style="font-size: 12px; color: #4f5f56">Bank</span><span style="font-family: 'Geist Mono', monospace; font-size: 17px; font-weight: 600">£1.2m</span></div>
+      <div style="padding: 10px 12px; background: #ffffff; border: 1px solid #d6ded5; border-radius: 10px; display: flex; flex-direction: column"><span style="font-size: 12px; color: #4f5f56">Free transfers</span><span style="font-family: 'Geist Mono', monospace; font-size: 17px; font-weight: 600">2</span></div>
+    </div>
+
+    <!-- Pitch -->
+    <section aria-label="Starting XI, 3-4-3" style="position: relative; aspect-ratio: 3 / 4; border-radius: 20px; overflow: hidden; background: repeating-linear-gradient(180deg, #145a3c 0 12.5%, #17633f 12.5% 25%); display: flex; flex-direction: column; justify-content: space-around; padding: 12px 4px">
+      <span aria-hidden="true" style="position: absolute; left: 50%; top: -1px; width: 44%; height: 14%; transform: translateX(-50%); border: 2px solid #3f7d61; border-top: 0; box-sizing: border-box"></span>
+      <span aria-hidden="true" style="position: absolute; left: 50%; bottom: -60px; width: 120px; height: 120px; transform: translateX(-50%); border: 2px solid #3f7d61; border-radius: 9999px"></span>
+      <sc-for list="{{ lines }}" as="line" hint-placeholder-count="4">
+        <div style="position: relative; display: flex; justify-content: space-evenly">
+          <sc-for list="{{ line.players }}" as="p" hint-placeholder-count="4">
+            <button type="button" onClick="{{ p.pick }}" aria-label="{{ p.aria }}" aria-pressed="{{ p.pressed }}" style="width: 80px; min-height: 88px; border: 0; background: transparent; padding: 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; position: relative">
+              <svg width="40" height="40" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3 3 6l2 4 2-1v12h10V9l2 1 2-4-5-3a4 4 0 0 1-8 0z" fill="{{ p.shirt }}" stroke="#0b1410" stroke-width="1" stroke-linejoin="round"/></svg>
+              <sc-if value="{{ p.cap }}" hint-placeholder-val="{{ false }}"><span style="position: absolute; top: 0; right: 10px; width: 20px; height: 20px; border-radius: 9999px; background: #b7f34a; color: #0b1410; border: 1px solid #0b1410; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center">C</span></sc-if>
+              <sc-if value="{{ p.flag }}" hint-placeholder-val="{{ false }}"><span style="position: absolute; top: 0; left: 10px; width: 20px; height: 20px; border-radius: 9999px; background: #fbeed3; color: #865500; border: 1px solid #865500; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center">!</span></sc-if>
+              <span style="max-width: 78px; padding: 2px 6px; border-radius: 6px; font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: {{ p.plate }}; color: #0b1410">{{ p.name }}</span>
+              <span style="font-family: 'Geist Mono', monospace; font-size: 12px; font-weight: 600; color: #eef5ef">{{ p.xp }}</span>
+            </button>
+          </sc-for>
+        </div>
+      </sc-for>
+    </section>
+
+    <!-- Bench -->
+    <section aria-label="Bench" style="background: #ffffff; border: 1px solid #d6ded5; border-radius: 14px; padding: 8px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px">
+      <sc-for list="{{ bench }}" as="b" hint-placeholder-count="4">
+        <button type="button" style="min-height: 64px; border: 0; background: #eef2ec; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer">
+          <span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: #4f5f56">{{ b.slot }}</span>
+          <span style="font-size: 13px; font-weight: 600">{{ b.name }}</span>
+          <span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: #11704a">{{ b.xp }}</span>
+        </button>
+      </sc-for>
+    </section>
+
+    <!-- Selected action -->
+    <sc-if value="{{ hasSel }}" hint-placeholder-val="{{ true }}">
+      <section style="background: #ffffff; border: 1px solid #d6ded5; border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 8px 24px -10px rgba(11,20,16,.22)">
+        <div style="display: flex; justify-content: space-between; align-items: baseline">
+          <span style="font-size: 16px; font-weight: 600">{{ sel.name }}</span>
+          <span style="font-size: 13px; color: {{ sel.noteC }}">{{ sel.note }}</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+          <button type="button" style="min-height: 44px; border-radius: 10px; border: 1px solid #7f9086; background: #ffffff; font-size: 13px; font-weight: 600; cursor: pointer">Captain</button>
+          <button type="button" style="min-height: 44px; border-radius: 10px; border: 1px solid #7f9086; background: #ffffff; font-size: 13px; font-weight: 600; cursor: pointer">Bench</button>
+          <a href="Players.dc.html" style="min-height: 44px; border-radius: 10px; background: #0b1410; color: #eef5ef; font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center; text-decoration: none">Replace</a>
+        </div>
+      </section>
+    </sc-if>
+  </main>
+
+  <nav aria-label="Main" style="flex: none; height: 64px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: rgba(243,245,240,.95); border-top: 1px solid #d6ded5">
+    <a href="Home.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #4f5f56; text-decoration: none; font-size: 12px; font-weight: 500"><span style="width: 56px; height: 30px; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></span>Home</a>
+    <a href="Squad.dc.html" aria-current="page" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #0b1410; text-decoration: none; font-size: 12px; font-weight: 600"><span style="width: 56px; height: 30px; border-radius: 9999px; background: #b7f34a; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 3 6l2 4 2-1v12h10V9l2 1 2-4-5-3a4 4 0 0 1-8 0z"/></svg></span>Squad</a>
+    <a href="Players.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #4f5f56; text-decoration: none; font-size: 12px; font-weight: 500"><span style="width: 56px; height: 30px; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span>Players</a>
+    <a href="Chips.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #4f5f56; text-decoration: none; font-size: 12px; font-weight: 500"><span style="width: 56px; height: 30px; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></span>Chips</a>
+    <a href="Main.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #4f5f56; text-decoration: none; font-size: 12px; font-weight: 500"><span style="width: 56px; height: 30px; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg></span>Leagues</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1040}}'>
+const SHIRT = { GK: '#f2a46b', DEF: '#f4f7f3', MID: '#b7f34a', FWD: '#ece4d1' };
+const XI = [
+  [['raya', 'Raya', 'GK', 4.1]],
+  [['gabriel', 'Gabriel', 'DEF', 4.6], ['gvardiol', 'Gvardiol', 'DEF', 3.2, 'flag'], ['hall', 'Hall', 'DEF', 3.8]],
+  [['salah', 'Salah', 'MID', 7.4, 'cap'], ['saka', 'Saka', 'MID', 6.8], ['mbeumo', 'Mbeumo', 'MID', 4.2], ['rice', 'Rice', 'MID', 4.0]],
+  [['haaland', 'Haaland', 'FWD', 6.6], ['wood', 'Wood', 'FWD', 4.4], ['watkins', 'Watkins', 'FWD', 4.5]]
+];
+const NOTES = { gvardiol: ['75% · knock, 50/50 for Sat', '#865500'], salah: ['Captain · 14.8 xP doubled', '#11704a'] };
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { sel: 'gvardiol' }; }
+  renderVals() {
+    const selId = (this.state && this.state.sel) || null;
+    let selP = null;
+    const lines = XI.map((row) => ({
+      players: row.map(([id, name, pos, xp, tag]) => {
+        const on = id === selId;
+        if (on) selP = { id, name, xp };
+        return {
+          name, xp: xp.toFixed(1), shirt: SHIRT[pos], cap: tag === 'cap', flag: tag === 'flag',
+          plate: on ? '#b7f34a' : '#ffffff', pressed: on ? 'true' : 'false',
+          aria: name + ', ' + pos + ', ' + xp.toFixed(1) + ' xP' + (tag === 'cap' ? ', captain' : '') + (tag === 'flag' ? ', flagged 75%' : ''),
+          pick: () => this.setState({ sel: on ? null : id })
+        };
+      })
+    }));
+    const n = selP ? (NOTES[selP.id] || [selP.xp.toFixed(1) + ' xP in GW 11', '#4f5f56']) : ['', '#4f5f56'];
+    return {
+      lines,
+      bench: [
+        { slot: 'GK', name: 'Pope', xp: '3.6' }, { slot: '1', name: 'Mitchell', xp: '3.4' },
+        { slot: '2', name: 'Andersen', xp: '2.9' }, { slot: '3', name: 'Sarr', xp: '2.7' }
+      ],
+      hasSel: !!selP,
+      sel: { name: selP ? selP.name : '', note: n[0], noteC: n[1] }
+    };
+  }
+}
+</script>
+</body>
+</html>
