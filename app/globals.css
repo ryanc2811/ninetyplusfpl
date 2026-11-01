@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+/* ===========================================================================
+   Pre-redesign stylesheet.
+
+   Everything down to the "NINETY+ design tokens" banner belongs to the screens
+   that have not been rebuilt against the mobile-first design system yet. The
+   token layer that follows it redefines the names the two sets share, so this
+   section keeps rendering while it is replaced screen by screen.
+   =========================================================================== */
+
 /* ---------------------------------------------------------------------------
    Tokens
 
@@ -38,13 +47,13 @@
   --on-ink: #e9f3ec;
   --on-ink-muted: #8fa398;
   --on-ink-faint: #7f938a;
-  --rail: #07100d;
-  --rail-border: #1d2a24;
-  --rail-hover: #111f19;
-  --rail-active: #18271f;
-  --rail-line: #1a2921;
-  --rail-muted: #8da097;
-  --rail-dim: #62756b;
+  --legacy-rail: #07100d;
+  --legacy-rail-border: #1d2a24;
+  --legacy-rail-hover: #111f19;
+  --legacy-rail-active: #18271f;
+  --legacy-rail-line: #1a2921;
+  --legacy-rail-muted: #8da097;
+  --legacy-rail-dim: #62756b;
 
   --pitch: #123f2c;
   --pitch-border: #2b6049;
@@ -84,8 +93,8 @@
   --ink: #16241d;
   --ink-hover: #1e3128;
   --on-ink: #e6efe8;
-  --rail: #070f0c;
-  --rail-border: #182620;
+  --legacy-rail: #070f0c;
+  --legacy-rail-border: #182620;
 
   --pitch: #0f3524;
   --pitch-border: #21503c;
@@ -118,8 +127,8 @@
     --ink: #16241d;
     --ink-hover: #1e3128;
     --on-ink: #e6efe8;
-    --rail: #070f0c;
-    --rail-border: #182620;
+    --legacy-rail: #070f0c;
+    --legacy-rail-border: #182620;
     --pitch: #0f3524;
     --pitch-border: #21503c;
     --topbar-bg: rgba(10, 19, 16, .9);
@@ -144,7 +153,7 @@
 @keyframes expand { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 
 * { box-sizing: border-box; }
-html { background: var(--rail); color-scheme: light; }
+html { background: var(--legacy-rail); color-scheme: light; }
 :root[data-theme="dark"] { color-scheme: dark; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { color-scheme: dark; } }
 body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-geist), Arial, sans-serif; transition: background var(--dur-2) var(--ease), color var(--dur-2) var(--ease); }
@@ -166,33 +175,33 @@ button { color: inherit; }
 .metric-grid > .metric:nth-child(4) { animation-delay: 195ms; }
 
 .shell { min-height: 100vh; display: grid; grid-template-columns: 224px minmax(0, 1fr); }
-.sidebar { height: 100vh; position: sticky; top: 0; background: var(--rail); color: var(--on-ink); padding: 28px 18px 20px; display: flex; flex-direction: column; border-right: 1px solid var(--rail-border); z-index: 30; }
+.sidebar { height: 100vh; position: sticky; top: 0; background: var(--legacy-rail); color: var(--on-ink); padding: 28px 18px 20px; display: flex; flex-direction: column; border-right: 1px solid var(--legacy-rail-border); z-index: 30; }
 .brand { border: 0; background: transparent; color: #fff; font-size: 24px; letter-spacing: -1.8px; font-weight: 850; text-align: left; padding: 0 10px; cursor: pointer; transition: transform var(--dur-1) var(--ease-spring); }
 .brand:hover { transform: translateX(2px); }
 .brand span { color: var(--lime); display: inline-block; transition: transform var(--dur-2) var(--ease-spring); }
 .brand:hover span { transform: rotate(90deg) scale(1.15); }
 .season { margin: 10px 10px 36px; color: #7d9185; font-family: var(--font-mono); font-size: 10px; letter-spacing: 1.8px; }
 .sidebar nav { display: grid; gap: 5px; }
-.nav-item { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; border: 0; background: transparent; color: var(--rail-muted); border-radius: 8px; padding: 11px 12px; font-size: 13px; cursor: pointer; text-align: left; transition: color var(--dur-1) var(--ease), background var(--dur-1) var(--ease); }
-.nav-item span { font-family: var(--font-mono); font-size: 16px; width: 18px; color: var(--rail-dim); transition: color var(--dur-1) var(--ease), transform var(--dur-2) var(--ease-spring); }
-.nav-item:hover { color: #fff; background: var(--rail-hover); }
+.nav-item { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; border: 0; background: transparent; color: var(--legacy-rail-muted); border-radius: 8px; padding: 11px 12px; font-size: 13px; cursor: pointer; text-align: left; transition: color var(--dur-1) var(--ease), background var(--dur-1) var(--ease); }
+.nav-item span { font-family: var(--font-mono); font-size: 16px; width: 18px; color: var(--legacy-rail-dim); transition: color var(--dur-1) var(--ease), transform var(--dur-2) var(--ease-spring); }
+.nav-item:hover { color: #fff; background: var(--legacy-rail-hover); }
 .nav-item:hover span { transform: translateX(2px) scale(1.1); }
-.nav-item.active { color: #fff; background: var(--rail-active); }
+.nav-item.active { color: #fff; background: var(--legacy-rail-active); }
 .nav-item.active span { color: var(--lime); }
 .nav-item.active:before { content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 2px; background: var(--lime); border-radius: 2px; animation: grow-y var(--dur-2) var(--ease) both; }
 @keyframes grow-y { from { transform: scaleY(0); } to { transform: scaleY(1); } }
 .sidebar-bottom { margin-top: auto; display: grid; gap: 14px; }
-.model-status { display: flex; gap: 10px; align-items: center; padding: 12px; border-top: 1px solid var(--rail-line); border-bottom: 1px solid var(--rail-line); }
+.model-status { display: flex; gap: 10px; align-items: center; padding: 12px; border-top: 1px solid var(--legacy-rail-line); border-bottom: 1px solid var(--legacy-rail-line); }
 .model-status b, .model-status small { display: block; }
 .model-status b { font-size: 11px; }
 .model-status small { color: #74877d; font-size: 9px; margin-top: 3px; }
 .pulse, .live-dot { width: 7px; height: 7px; background: var(--lime); display: inline-block; border-radius: 50%; }
 .pulse { animation: ring 2.4s var(--ease) infinite; }
 .team-card { border: 0; padding: 9px 7px; background: transparent; color: #fff; display: grid; grid-template-columns: 32px 1fr auto; align-items: center; gap: 9px; text-align: left; cursor: pointer; border-radius: 8px; transition: background var(--dur-1) var(--ease); }
-.team-card:hover { background: var(--rail-hover); }
+.team-card:hover { background: var(--legacy-rail-hover); }
 .team-card .avatar { width: 32px; height: 32px; border: 1px solid #415248; display: grid; place-items: center; border-radius: 50%; color: var(--lime); font-size: 10px; font-weight: 800; }
 .team-card b, .team-card small { display: block; }
-.team-card b { font-size: 11px; }.team-card small { color: #71847a; font-size: 9px; margin-top: 2px; }.team-card i { color: var(--rail-dim); font-style: normal; }
+.team-card b { font-size: 11px; }.team-card small { color: #71847a; font-size: 9px; margin-top: 2px; }.team-card i { color: var(--legacy-rail-dim); font-style: normal; }
 
 .workspace { min-width: 0; }
 .topbar { height: 92px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 34px; background: var(--topbar-bg); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 20; }
@@ -442,4 +451,403 @@ button { color: inherit; }
     transition-duration: .01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ---------------------------------------------------------------------------
+   NINETY+ design tokens
+
+   Generated from docs/design/redesign/tokens.json. Colour and shadow ship in
+   both themes: light by default, dark under [data-theme="dark"] and under the
+   OS preference unless the manager has chosen light explicitly. Every other
+   scale is theme-independent.
+--------------------------------------------------------------------------- */
+
+:root {
+  --bg: #f3f5f0;
+  --surface: #ffffff;
+  --surface-2: #eef2ec;
+  --surface-3: #e2e8e1;
+  --border: #d6ded5;
+  --border-strong: #7f9086;
+  --text: #0b1410;
+  --text-muted: #4f5f56;
+  --text-disabled: #9aa79f;
+  --positive: #11704a;
+  --positive-soft: #e2f0e4;
+  --negative: #b0362a;
+  --negative-soft: #fbe6e2;
+  --warning: #865500;
+  --warning-soft: #fbeed3;
+  --accent: #b7f34a;
+  --on-accent: #0b1410;
+  --ink: #0b1410;
+  --on-ink: #eef5ef;
+  --on-ink-muted: #a3b6aa;
+  --action: #0b1410;
+  --on-action: #eef5ef;
+  --focus: #11704a;
+  --pitch: #145a3c;
+  --pitch-stripe: #17633f;
+  --pitch-line: #3f7d61;
+  --shirt: #f4f7f3;
+  --shirt-gk: #f2a46b;
+  --shirt-mid: #b7f34a;
+  --shirt-fwd: #ece4d1;
+  --on-shirt: #0b1410;
+  --fdr-1: #0f6b45;
+  --on-fdr-1: #ffffff;
+  --fdr-2: #7fd6a4;
+  --on-fdr-2: #0b1410;
+  --fdr-3: #e2e8e1;
+  --on-fdr-3: #0b1410;
+  --fdr-4: #ff9e80;
+  --on-fdr-4: #0b1410;
+  --fdr-5: #8f1d2c;
+  --on-fdr-5: #ffffff;
+  --scrim: rgba(4, 10, 8, 0.56);
+  --header-glass: rgba(243, 245, 240, 0.9);
+
+  --shadow-sm: 0 1px 2px rgba(11, 20, 16, 0.06);
+  --shadow-md: 0 8px 24px -10px rgba(11, 20, 16, 0.22);
+  --shadow-sheet: 0 -12px 40px -12px rgba(11, 20, 16, 0.3);
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-sheet: 24px;
+  --radius-full: 9999px;
+
+  --tap-min: 44px;
+  --control-md: 44px;
+  --control-sm: 36px;
+  --top-bar: 56px;
+  --tab-bar: 64px;
+  --row-min: 64px;
+  --rail: 240px;
+  --content-max: 1200px;
+  --sheet-max: 640px;
+
+  --bp-medium: 600px;
+  --bp-expanded: 900px;
+  --bp-wide: 1200px;
+
+  --z-sticky: 10;
+  --z-header: 20;
+  --z-tabbar: 40;
+  --z-sheet: 60;
+  --z-toast: 80;
+
+  /* Families carry the next/font variables, which are set on <html>. */
+  --sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
+  --serif: var(--font-instrument-serif), Georgia, "Times New Roman", serif;
+
+  /* Names the pre-redesign stylesheet below still uses. */
+  --font-geist: var(--sans);
+  --font-editorial: var(--serif);
+}
+
+:root[data-theme="dark"] {
+  --bg: #08100d;
+  --surface: #0f1a15;
+  --surface-2: #15231c;
+  --surface-3: #1d2e26;
+  --border: #25382f;
+  --border-strong: #5d7a6b;
+  --text: #e8f0ea;
+  --text-muted: #9db0a5;
+  --text-disabled: #56685e;
+  --positive: #5fd197;
+  --positive-soft: #163423;
+  --negative: #f2897a;
+  --negative-soft: #3a1f1b;
+  --warning: #e8b95a;
+  --warning-soft: #33290f;
+  --accent: #b7f34a;
+  --on-accent: #0b1410;
+  --ink: #15231c;
+  --on-ink: #e8f0ea;
+  --on-ink-muted: #9db0a5;
+  --action: #b7f34a;
+  --on-action: #0b1410;
+  --focus: #b7f34a;
+  --pitch: #0f3d29;
+  --pitch-stripe: #11442e;
+  --pitch-line: #2d6249;
+  --shirt: #f4f7f3;
+  --shirt-gk: #f2a46b;
+  --shirt-mid: #b7f34a;
+  --shirt-fwd: #ece4d1;
+  --on-shirt: #0b1410;
+  --fdr-1: #2f9e68;
+  --on-fdr-1: #0b1410;
+  --fdr-2: #9fe3bb;
+  --on-fdr-2: #0b1410;
+  --fdr-3: #2a3d34;
+  --on-fdr-3: #e8f0ea;
+  --fdr-4: #ffab91;
+  --on-fdr-4: #0b1410;
+  --fdr-5: #c2404f;
+  --on-fdr-5: #ffffff;
+  --scrim: rgba(0, 0, 0, 0.66);
+  --header-glass: rgba(8, 16, 13, 0.88);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 8px 24px -10px rgba(0, 0, 0, 0.7);
+  --shadow-sheet: 0 -12px 40px -12px rgba(0, 0, 0, 0.8);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #08100d;
+    --surface: #0f1a15;
+    --surface-2: #15231c;
+    --surface-3: #1d2e26;
+    --border: #25382f;
+    --border-strong: #5d7a6b;
+    --text: #e8f0ea;
+    --text-muted: #9db0a5;
+    --text-disabled: #56685e;
+    --positive: #5fd197;
+    --positive-soft: #163423;
+    --negative: #f2897a;
+    --negative-soft: #3a1f1b;
+    --warning: #e8b95a;
+    --warning-soft: #33290f;
+    --accent: #b7f34a;
+    --on-accent: #0b1410;
+    --ink: #15231c;
+    --on-ink: #e8f0ea;
+    --on-ink-muted: #9db0a5;
+    --action: #b7f34a;
+    --on-action: #0b1410;
+    --focus: #b7f34a;
+    --pitch: #0f3d29;
+    --pitch-stripe: #11442e;
+    --pitch-line: #2d6249;
+    --shirt: #f4f7f3;
+    --shirt-gk: #f2a46b;
+    --shirt-mid: #b7f34a;
+    --shirt-fwd: #ece4d1;
+    --on-shirt: #0b1410;
+    --fdr-1: #2f9e68;
+    --on-fdr-1: #0b1410;
+    --fdr-2: #9fe3bb;
+    --on-fdr-2: #0b1410;
+    --fdr-3: #2a3d34;
+    --on-fdr-3: #e8f0ea;
+    --fdr-4: #ffab91;
+    --on-fdr-4: #0b1410;
+    --fdr-5: #c2404f;
+    --on-fdr-5: #ffffff;
+    --scrim: rgba(0, 0, 0, 0.66);
+    --header-glass: rgba(8, 16, 13, 0.88);
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 8px 24px -10px rgba(0, 0, 0, 0.7);
+    --shadow-sheet: 0 -12px 40px -12px rgba(0, 0, 0, 0.8);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Type scale
+
+   One class per published style so no component invents a size. `caption` at
+   12px is the floor and `input` is 16px so iOS never zooms a focused field.
+--------------------------------------------------------------------------- */
+
+.t-display { font-family: var(--serif); font-size: 40px; line-height: 44px; font-weight: 400; letter-spacing: -0.02em; }
+.t-title-1 { font-family: var(--serif); font-size: 28px; line-height: 32px; font-weight: 400; letter-spacing: -0.01em; }
+.t-stat { font-family: var(--serif); font-size: 32px; line-height: 36px; font-weight: 400; letter-spacing: -0.01em; }
+.t-title-2 { font-family: var(--sans); font-size: 20px; line-height: 26px; font-weight: 600; letter-spacing: -0.01em; }
+.t-headline { font-family: var(--sans); font-size: 16px; line-height: 22px; font-weight: 600; }
+.t-body { font-family: var(--sans); font-size: 15px; line-height: 22px; font-weight: 400; }
+.t-body-sm { font-family: var(--sans); font-size: 13px; line-height: 18px; font-weight: 400; }
+.t-label { font-family: var(--sans); font-size: 13px; line-height: 16px; font-weight: 500; }
+.t-caption { font-family: var(--sans); font-size: 12px; line-height: 16px; font-weight: 400; }
+.t-input { font-family: var(--sans); font-size: 16px; line-height: 22px; font-weight: 400; }
+.t-eyebrow { font-family: var(--mono); font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; }
+.t-data { font-family: var(--mono); font-size: 13px; line-height: 18px; font-weight: 500; }
+.t-data-lg { font-family: var(--mono); font-size: 17px; line-height: 22px; font-weight: 600; }
+
+/* The display style grows at the expanded breakpoint. */
+@media (min-width: 900px) {
+  .t-display { font-size: 48px; line-height: 52px; }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-disabled: var(--text-disabled);
+  --color-positive: var(--positive);
+  --color-positive-soft: var(--positive-soft);
+  --color-negative: var(--negative);
+  --color-negative-soft: var(--negative-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-ink: var(--ink);
+  --color-on-ink: var(--on-ink);
+  --color-on-ink-muted: var(--on-ink-muted);
+  --color-action: var(--action);
+  --color-on-action: var(--on-action);
+  --color-focus: var(--focus);
+  --color-pitch: var(--pitch);
+  --color-pitch-stripe: var(--pitch-stripe);
+  --color-pitch-line: var(--pitch-line);
+  --color-shirt: var(--shirt);
+  --color-shirt-gk: var(--shirt-gk);
+  --color-shirt-mid: var(--shirt-mid);
+  --color-shirt-fwd: var(--shirt-fwd);
+  --color-on-shirt: var(--on-shirt);
+  --color-fdr-1: var(--fdr-1);
+  --color-on-fdr-1: var(--on-fdr-1);
+  --color-fdr-2: var(--fdr-2);
+  --color-on-fdr-2: var(--on-fdr-2);
+  --color-fdr-3: var(--fdr-3);
+  --color-on-fdr-3: var(--on-fdr-3);
+  --color-fdr-4: var(--fdr-4);
+  --color-on-fdr-4: var(--on-fdr-4);
+  --color-fdr-5: var(--fdr-5);
+  --color-on-fdr-5: var(--on-fdr-5);
+  --color-scrim: var(--scrim);
+  --color-header-glass: var(--header-glass);
+
+  --font-sans: var(--sans);
+  --font-mono: var(--mono);
+  --font-serif: var(--serif);
+
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-sheet: 24px;
+  --radius-full: 9999px;
+
+  /* Media queries cannot read a custom property, so these stay literal. */
+  --breakpoint-medium: 600px;
+  --breakpoint-expanded: 900px;
+  --breakpoint-wide: 1200px;
+}
+
+/* ---------------------------------------------------------------------------
+   Base
+
+   These rules sit after the pre-redesign stylesheet above and win where the
+   two overlap, so the redesigned screens get the new tokens while the screens
+   still waiting for their rebuild keep working.
+--------------------------------------------------------------------------- */
+
+:root {
+  /* Motion: presses, state changes, sheets. */
+  --dur-press: 120ms;
+  --dur-state: 220ms;
+  --dur-sheet: 360ms;
+  --ease-out: cubic-bezier(.2, .8, .2, 1);
+  --ease-sheet: cubic-bezier(.32, .72, 0, 1);
+}
+
+html { background: var(--bg); }
+
+body {
+  /* Every figure in the product is tabular. */
+  font-variant-numeric: tabular-nums;
+  -webkit-text-size-adjust: 100%;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ---------------------------------------------------------------------------
+   Primitive behaviour
+
+   Anything a Tailwind utility cannot express: the shimmer, the live pulse, the
+   score flash, the sheet transition and the 44px hit area that a smaller
+   visual element still has to own.
+--------------------------------------------------------------------------- */
+
+@keyframes np-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@keyframes np-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(183, 243, 74, .7); }
+  70% { box-shadow: 0 0 0 8px rgba(183, 243, 74, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(183, 243, 74, 0); }
+}
+@keyframes np-flash { from { background: var(--accent); } to { background: transparent; } }
+@keyframes np-sheet-in { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes np-dialog-in { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes np-scrim-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* Loading blocks are shaped like the content they stand in for. */
+.np-skel {
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 37%, var(--surface-2) 63%);
+  background-size: 200% 100%;
+  animation: np-shimmer 1.4s linear infinite;
+  border-radius: var(--radius-xs);
+}
+
+.np-pulse { animation: np-pulse 1.6s infinite; }
+.np-flash { animation: np-flash 1.4s ease-out; }
+.np-sheet-in { animation: np-sheet-in var(--dur-sheet) var(--ease-sheet) both; }
+.np-dialog-in { animation: np-dialog-in var(--dur-state) var(--ease-out) both; }
+.np-scrim-in { animation: np-scrim-in var(--dur-state) var(--ease-out) both; }
+
+/*
+ * A visual element may be smaller than the minimum tap target; its hit area
+ * may not. The pseudo-element grows the hit area without moving the artwork.
+ */
+.np-tap { position: relative; }
+.np-tap::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  width: 100%;
+  height: 100%;
+  min-width: var(--tap-min);
+  min-height: var(--tap-min);
+}
+
+/* Press feedback is a scale; no hover lift on touch. */
+.np-press { transition: transform var(--dur-press) var(--ease-out); }
+.np-press:active { transform: scale(.98); }
+
+/* The page's own bottom padding clears the tab bar and the home indicator. */
+.np-page-bottom { padding-bottom: calc(var(--tab-bar) + env(safe-area-inset-bottom) + var(--space-4)); }
+@media (min-width: 900px) {
+  .np-page-bottom { padding-bottom: var(--space-8); }
+}
+
+/* The fixture ticker is the one element allowed to scroll sideways. */
+.np-scroll-x {
+  overflow-x: auto;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+.np-scroll-x::-webkit-scrollbar { display: none; }
+
+/* At the expanded breakpoint a sheet is a centred dialog, so it fades in place
+   instead of rising from the bottom edge. */
+@media (min-width: 900px) {
+  .np-sheet-in { animation: np-dialog-in var(--dur-state) var(--ease-out) both; }
 }

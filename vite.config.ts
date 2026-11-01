@@ -44,6 +44,11 @@ export default defineConfig(async () => {
   const { cloudflare } = await import("@cloudflare/vite-plugin");
 
   return {
+    // vinext aliases `next/link` to its own shim, but Vite's dependency
+    // scanner pre-bundles the real package first, which hands the client a
+    // second copy of React and breaks hydration. Excluding it from
+    // pre-bundling lets the alias resolve.
+    optimizeDeps: { exclude: ["next/link"] },
     server: isCodexSeatbeltSandbox
       ? { watch: { useFsEvents: false, usePolling: true } }
       : undefined,
