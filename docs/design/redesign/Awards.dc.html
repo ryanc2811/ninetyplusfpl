@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Leagues — Season and awards</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;800&amp;family=Geist+Mono:wght@500;600&amp;family=Instrument+Serif&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#11704a}a:hover{color:#0b1410}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid #11704a;outline-offset:2px}
+@keyframes np-pulse{0%{box-shadow:0 0 0 0 rgba(183,243,74,.7)}70%{box-shadow:0 0 0 8px rgba(183,243,74,0)}100%{box-shadow:0 0 0 0 rgba(183,243,74,0)}}
+.live-dot{animation:np-pulse 1.6s infinite}
+@media (prefers-reduced-motion: reduce){.live-dot{animation:none}}
+</style>
+</helmet>
+<div style="width: 390px; height: 1500px; display: flex; flex-direction: column; background: #f3f5f0; color: #0b1410; font-family: Geist, ui-sans-serif, system-ui, sans-serif; font-variant-numeric: tabular-nums">
+
+  <header style="flex: none; padding: 12px 16px 8px; background: rgba(243,245,240,.9); border-bottom: 1px solid #d6ded5; display: flex; flex-direction: column; gap: 6px">
+    <div style="display: flex; align-items: center; gap: 8px; font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: .08em; font-weight: 500; color: #4f5f56">
+      <span class="live-dot" style="width: 8px; height: 8px; border-radius: 9999px; background: #b7f34a; border: 1px solid #0b1410"></span>
+      <span>GW 10 · LIVE · NEXT DEADLINE SAT 11:00</span>
+    </div>
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+      <h1 style="margin: 0; font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: 28px; line-height: 32px">Leagues</h1>
+      <button type="button" aria-label="Switch league" style="min-height: 44px; display: flex; align-items: center; gap: 6px; padding: 0 12px; border: 1px solid #7f9086; background: #ffffff; border-radius: 10px; font-size: 13px; font-weight: 500; cursor: pointer">Sunday League Legends<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+    </div>
+  </header>
+
+  <main style="flex: 1; padding: 12px 16px 24px; display: flex; flex-direction: column; gap: 24px">
+
+    <nav aria-label="League views" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 4px; background: #eef2ec; border-radius: 10px">
+      <a href="Main.dc.html" style="min-height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-size: 13px; font-weight: 500; color: #0b1410; text-decoration: none">This month</a>
+      <a href="Awards.dc.html" aria-current="page" style="min-height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-size: 13px; font-weight: 500; color: #0b1410; text-decoration: none; background: #ffffff; box-shadow: 0 1px 2px rgba(11,20,16,.12)">Season &amp; awards</a>
+    </nav>
+
+    <!-- Months -->
+    <section style="display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; justify-content: space-between; align-items: baseline">
+        <h2 style="margin: 0; font-size: 20px; line-height: 26px; font-weight: 600">Manager of the Month</h2>
+        <span style="font-size: 13px; color: #4f5f56">2 of 10 decided</span>
+      </div>
+      <div style="background: #ffffff; border: 1px solid #d6ded5; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 2px rgba(11,20,16,.06)">
+        <sc-for list="{{ months }}" as="m" hint-placeholder-count="6">
+          <a href="{{ m.href }}" style="min-height: 64px; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-top: 1px solid #d6ded5; color: #0b1410; text-decoration: none; background: {{ m.bg }}">
+            <span style="width: 44px; flex: none; display: flex; flex-direction: column">
+              <span style="font-size: 16px; font-weight: 600">{{ m.short }}</span>
+              <span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: #4f5f56">{{ m.gws }}</span>
+            </span>
+            <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+              <span style="font-size: 15px; font-weight: 600">{{ m.who }}</span>
+              <span style="font-size: 13px; color: #4f5f56">{{ m.detail }}</span>
+            </span>
+            <span style="flex: none; font-size: 12px; font-weight: 500; padding: 2px 8px; border-radius: 9999px; display: flex; align-items: center; gap: 6px; background: {{ m.pillBg }}; color: {{ m.pillC }}">
+              <sc-if value="{{ m.live }}" hint-placeholder-val="{{ false }}"><span style="width: 6px; height: 6px; border-radius: 9999px; background: #11704a"></span></sc-if>{{ m.status }}
+            </span>
+          </a>
+        </sc-for>
+      </div>
+    </section>
+
+    <!-- Months won -->
+    <section style="display: flex; flex-direction: column; gap: 12px">
+      <h2 style="margin: 0; font-size: 20px; line-height: 26px; font-weight: 600">Months won</h2>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+        <div style="background: #0b1410; color: #eef5ef; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 4px">
+          <span style="font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: .08em; color: #a3b6aa">YOU</span>
+          <span style="font-family: 'Instrument Serif', Georgia, serif; font-size: 40px; line-height: 44px">1</span>
+          <span style="font-size: 13px; color: #a3b6aa">September · 241</span>
+        </div>
+        <div style="background: #ffffff; border: 1px solid #d6ded5; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 4px">
+          <span style="font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: .08em; color: #4f5f56">PRIYA SHAH</span>
+          <span style="font-family: 'Instrument Serif', Georgia, serif; font-size: 40px; line-height: 44px">1</span>
+          <span style="font-size: 13px; color: #4f5f56">August · 198</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Badges -->
+    <section style="display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; justify-content: space-between; align-items: baseline">
+        <h2 style="margin: 0; font-size: 20px; line-height: 26px; font-weight: 600">Badges</h2>
+        <span style="font-size: 13px; color: #4f5f56">Season so far</span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+        <sc-for list="{{ badges }}" as="b" hint-placeholder-count="4">
+          <div style="background: #ffffff; border: 1px solid #d6ded5; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 8px">
+            <span style="width: 36px; height: 36px; border-radius: 9999px; background: {{ b.bg }}; color: {{ b.c }}; display: flex; align-items: center; justify-content: center">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ b.icon }}"/></svg>
+            </span>
+            <span style="font-size: 13px; font-weight: 500; color: #4f5f56">{{ b.label }}</span>
+            <span style="font-size: 16px; font-weight: 600; line-height: 20px">{{ b.who }}</span>
+            <span style="font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 500; color: {{ b.c }}">{{ b.value }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+
+    <!-- Alerts -->
+    <section style="display: flex; flex-direction: column; gap: 12px">
+      <h2 style="margin: 0; font-size: 20px; line-height: 26px; font-weight: 600">Live alerts</h2>
+      <div style="background: #ffffff; border: 1px solid #d6ded5; border-radius: 14px; padding: 0 16px">
+        <sc-for list="{{ alerts }}" as="a" hint-placeholder-count="4">
+          <label style="min-height: 64px; display: flex; align-items: center; gap: 12px; border-top: 1px solid {{ a.line }}; cursor: pointer; position: relative">
+            <span style="flex: 1; display: flex; flex-direction: column"><span style="font-size: 16px; font-weight: 600">{{ a.title }}</span><span style="font-size: 13px; color: #4f5f56">{{ a.sub }}</span></span>
+            <input type="checkbox" checked="{{ a.on }}" onChange="{{ a.toggle }}" style="position: absolute; opacity: 0; width: 1px; height: 1px">
+            <span aria-hidden="true" style="width: 48px; height: 28px; flex: none; border-radius: 9999px; padding: 3px; box-sizing: border-box; display: flex; justify-content: {{ a.j }}; background: {{ a.track }}; transition: background 220ms"><span style="width: 22px; height: 22px; border-radius: 9999px; background: #ffffff; box-shadow: 0 1px 2px rgba(11,20,16,.3)"></span></span>
+          </label>
+        </sc-for>
+      </div>
+    </section>
+  </main>
+
+  <nav aria-label="Main" style="flex: none; height: 64px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: rgba(243,245,240,.95); border-top: 1px solid #d6ded5">
+    <a href="Home.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #4f5f56; text-decoration: none; font-size: 12px; font-weight: 500"><span style="width: 56px; height: 30px; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></span>Home</a>
+    <a href="Squad.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #4f5f56; text-decoration: none; font-size: 12px; font-weight: 500"><span style="width: 56px; height: 30px; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 3 6l2 4 2-1v12h10V9l2 1 2-4-5-3a4 4 0 0 1-8 0z"/></svg></span>Squad</a>
+    <a href="Players.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #4f5f56; text-decoration: none; font-size: 12px; font-weight: 500"><span style="width: 56px; height: 30px; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span>Players</a>
+    <a href="Chips.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #4f5f56; text-decoration: none; font-size: 12px; font-weight: 500"><span style="width: 56px; height: 30px; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></span>Chips</a>
+    <a href="Main.dc.html" aria-current="page" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #0b1410; text-decoration: none; font-size: 12px; font-weight: 600"><span style="width: 56px; height: 30px; border-radius: 9999px; background: #b7f34a; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg></span>Leagues</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1500}}'>
+const MONTHS = [
+  { short: 'Aug', gws: 'GW 1–3', who: 'Priya Shah', detail: '198 net · 6 clear of Dan', status: 'Won', kind: 'done' },
+  { short: 'Sep', gws: 'GW 4–6', who: 'You', detail: '241 net · 5 clear of Dan', status: 'Won', kind: 'you' },
+  { short: 'Oct', gws: 'GW 7–10', who: 'Dan Mercer leads', detail: 'You’re 4 behind · 3 players to play', status: 'Live', kind: 'live' },
+  { short: 'Nov', gws: 'GW 11–13', who: 'Starts Sat 11:00', detail: 'Everyone resets to 0', status: 'Next', kind: 'next' },
+  { short: 'Dec', gws: 'GW 14–19', who: 'Six gameweeks', detail: 'Longest month · two double-header weeks', status: 'Later', kind: 'next' }
+];
+const ICON = {
+  bench: 'M4 18h16M6 18v-6h12v6M8 12V8h8v4',
+  hit: 'M12 3v10M12 17v.5M5 21h14L12 3z',
+  steady: 'M3 12h4l3-6 4 12 3-6h4',
+  best: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.5 2.9 1-6.1L3.2 9.5l6.1-.9z'
+};
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { on: { lead: true, rank: true, result: true, deadline: false } }; }
+  renderVals() {
+    const on = (this.state && this.state.on) || {};
+    const flip = (k) => () => this.setState({ on: { ...on, [k]: !on[k] } });
+    const AL = [
+      ['lead', 'Lead changes', 'When the Manager of the Month leader changes'],
+      ['rank', 'Your monthly rank', 'Each time you move up or down during live games'],
+      ['result', 'Month result and badges', 'When a month is confirmed after bonus'],
+      ['deadline', 'Deadline reminder', '2 hours before each deadline']
+    ];
+    return {
+      months: MONTHS.map((m) => ({
+        ...m,
+        live: m.kind === 'live',
+        href: m.kind === 'live' ? 'Main.dc.html' : '#',
+        bg: m.kind === 'you' ? '#e2f0e4' : '#ffffff',
+        pillBg: m.kind === 'live' ? '#e2f0e4' : m.kind === 'next' ? '#eef2ec' : '#0b1410',
+        pillC: m.kind === 'live' ? '#11704a' : m.kind === 'next' ? '#4f5f56' : '#eef5ef'
+      })),
+      badges: [
+        { label: 'Best gameweek', who: 'You', value: '98 pts · GW 4', icon: ICON.best, bg: '#b7f34a', c: '#11704a' },
+        { label: 'Most consistent', who: 'Chloe Barnes', value: '±8.2 pts a week', icon: ICON.steady, bg: '#e2f0e4', c: '#11704a' },
+        { label: 'Bench regret', who: 'Tom Ellis', value: '31 pts benched', icon: ICON.bench, bg: '#fbeed3', c: '#865500' },
+        { label: 'Hit-taker', who: 'Josh Reid', value: '−24 pts in hits', icon: ICON.hit, bg: '#fbe6e2', c: '#b0362a' }
+      ],
+      alerts: AL.map((a, i) => ({
+        title: a[1], sub: a[2], on: !!on[a[0]], toggle: flip(a[0]),
+        line: i === 0 ? 'transparent' : '#d6ded5',
+        track: on[a[0]] ? '#11704a' : '#7f9086', j: on[a[0]] ? 'flex-end' : 'flex-start'
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,91 +1,132 @@
 /**
- * International tournament workload.
+ * International tournament workload and reported availability.
  *
- * Players whose nation goes deep into a summer tournament return to their clubs
- * late and miss most of pre-season. The effect on Fantasy scoring is not that
- * they play worse — it is that they are eased back in: benched for the opener,
- * given an hour rather than ninety minutes, rotated through the first few
- * Gameweeks. That is a *minutes* effect, so it is applied to the expected-
- * minutes projection rather than to points directly.
+ * Players whose nation goes deep into a summer tournament return late and miss
+ * most of pre-season. The effect on Fantasy scoring is not that they play
+ * worse — they are eased back in: benched for the opener, given an hour rather
+ * than ninety minutes, rotated through the opening weeks. That is a *minutes*
+ * effect, so it is applied to the expected-minutes projection and propagates
+ * from there into every scoring component.
  *
- * The table below is deliberately small and source-attributed. A nation with no
- * entry receives no adjustment, so an incomplete table degrades to the previous
- * behaviour rather than inventing one. Region identifiers are the official FPL
- * `element.region` values, confirmed by cross-referencing squad lists in the
- * live feed.
+ * This reads a versioned, source-attributed dataset rather than inferring a
+ * tournament run from a player's nationality. Two rules come from the dataset
+ * itself and are honoured here:
  *
- * OPERATOR NOTE: only nations that have been explicitly verified belong here.
- * Add an entry per nation that reached the knockout rounds, with the date it
- * was eliminated and the source used. Do not guess a run.
+ * - a confirmed injury or rehabilitation overrides fatigue modelling;
+ * - squad members who played little or nothing are not penalised for having
+ *   been selected.
+ *
+ * The official FPL availability field always wins where it is more pessimistic,
+ * because it is live and this dataset is a dated snapshot.
  */
 
 import type { ExpectedMinutesProjection } from "./contracts/fpl.ts";
+import riskData from "../data/reference/world-cup-2026-gw1-risk.json" with { type: "json" };
 
-export type TournamentStage =
-  | "winner"
-  | "finalist"
-  | "semi-final"
-  | "quarter-final"
-  | "round-of-16"
-  | "group";
-
-export type NationWorkloadSignal = {
-  regionId: number;
-  nation: string;
-  stage: TournamentStage;
-  confidence: number;
-  source: string;
+export type WorkloadRecord = {
+  player: string;
+  club: string;
+  position: string;
+  minutes: number;
+  injury: string;
+  riskScore: number;
+  riskTier: string;
+  turnaroundDays: number;
+  projection: string;
 };
-
-/**
- * Peak reduction in start probability for the first affected Gameweek. Halves
- * each subsequent Gameweek, so the effect is spent within roughly a month.
- */
-const STAGE_IMPACT: Record<TournamentStage, number> = {
-  winner: 0.30,
-  finalist: 0.28,
-  "semi-final": 0.22,
-  "quarter-final": 0.12,
-  "round-of-16": 0.05,
-  group: 0,
-};
-
-const DECAY_PER_GAMEWEEK = 0.5;
-
-/**
- * Minutes a returning starter is held back when they do start, at full impact.
- * Scales with the same decay as the start-probability reduction.
- */
-const PEAK_MINUTES_WITHHELD = 16;
 
 export type TournamentWorkload = {
   tournament: string;
+  reportDate: string;
   /** First Gameweek the adjustment applies to. */
   firstGameweek: number;
-  /** Gameweeks after which no adjustment is applied at all. */
+  /** Gameweek after which fatigue is assumed to have washed out. */
   lastGameweek: number;
-  signals: NationWorkloadSignal[];
+  records: WorkloadRecord[];
+  /** Non-tournament injuries reported for the same round. */
+  injuries: Array<{ player: string; club: string; issue: string; status: string }>;
 };
+
+type RawPlayer = {
+  player: string; club: string; position: string; minutes: number;
+  injury: string; risk_score: number; risk_tier: string;
+  turnaround_days: number; projection: string;
+};
+type RawInjury = { player: string; club: string; issue: string; status: string };
+type RawFile = {
+  report_date: string;
+  players: RawPlayer[];
+  other_gw1_injuries: RawInjury[];
+};
+
+const raw = riskData as unknown as RawFile;
 
 export const INTERNATIONAL_WORKLOAD: TournamentWorkload = {
   tournament: "FIFA World Cup 2026",
+  reportDate: raw.report_date,
   firstGameweek: 1,
   lastGameweek: 4,
-  signals: [
-    {
-      regionId: 241,
-      nation: "England",
-      stage: "semi-final",
-      confidence: 0.6,
-      source: "operator-supplied: England reached at least the semi-final",
-    },
-  ],
+  records: raw.players.map((entry) => ({
+    player: entry.player,
+    club: entry.club,
+    position: entry.position,
+    minutes: entry.minutes,
+    injury: entry.injury,
+    riskScore: entry.risk_score,
+    riskTier: entry.risk_tier,
+    turnaroundDays: entry.turnaround_days,
+    projection: entry.projection,
+  })),
+  injuries: raw.other_gw1_injuries.map((entry) => ({
+    player: entry.player,
+    club: entry.club,
+    issue: entry.issue,
+    status: entry.status,
+  })),
 };
 
+/**
+ * Availability implied by a reported medical status. Derived from the wording
+ * the dataset uses, and applied as a ceiling on the chance of playing.
+ */
+function reportedAvailability(status: string): number | null {
+  // Clauses are dropped when negated, so "surgery reportedly not expected"
+  // does not read as surgery and "no confirmed injury" does not read as one.
+  const asserted = status
+    .toLowerCase()
+    .split(/[;,]|\s+—\s+|\s+-\s+/)
+    .filter((clause) => !/\bnot\b|\bno\b|\bwithout\b/.test(clause))
+    .join(" ");
+
+  if (/\bout\b|expected to miss|miss(ing)? gw1/.test(asserted)) return 0;
+  if (/rehabilitation|surgery/.test(asserted)) return 0.12;
+  if (/doubt/.test(asserted)) return 0.45;
+  if (/monitor/.test(asserted)) return 0.8;
+  return null;
+}
+
+/**
+ * Fatigue-driven reduction in start probability, from the dataset's own
+ * composite risk score. The score already folds in tournament stage, minutes
+ * played and goalkeeping load, so nothing is recomputed here. Scores at or
+ * below 3 are treated as no meaningful load, matching the dataset's LOW tier.
+ */
+const MAX_FATIGUE_REDUCTION = 0.34;
+
+function fatigueReduction(riskScore: number) {
+  return clamp((riskScore - 3) * 0.038, 0, MAX_FATIGUE_REDUCTION);
+}
+
+const DECAY_PER_GAMEWEEK = 0.5;
+/** Minutes a returning starter is held back when they do start, at full impact. */
+const PEAK_MINUTES_WITHHELD = 16;
+
 export type WorkloadImpact = {
-  nation: string;
-  stage: TournamentStage;
+  player: string;
+  /** Multiplier applied to the modelled start probability. */
   startProbabilityMultiplier: number;
+  /** Hard ceiling on the chance of playing, from a reported medical status. */
+  availabilityCeiling: number | null;
   minutesWithheld: number;
   confidence: number;
   reason: string;
@@ -95,61 +136,173 @@ function clamp(value: number, minimum: number, maximum: number) {
   return Math.min(maximum, Math.max(minimum, value));
 }
 
+function normalise(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z ]/g, "")
+    .trim();
+}
+
+/** True when either club string identifies the other, tolerating short codes. */
+function sameClub(datasetClub: string, candidates: string[]) {
+  const target = normalise(datasetClub);
+  return candidates.some((candidate) => {
+    const value = normalise(candidate);
+    if (!value) return false;
+    return value === target || target.startsWith(value) || value.startsWith(target);
+  });
+}
+
 /**
- * Returns the workload adjustment for a nation in a given Gameweek, or null
- * when the nation is not in the table or the effect has expired.
+ * Matches a dataset row to an FPL player.
+ *
+ * Full name first, then surname. A surname is accepted on its own only when
+ * exactly one row in the dataset carries it — otherwise the club must agree,
+ * which is what separates the two Martinezes. FPL exposes clubs by short code
+ * while the dataset uses full names, so both are offered to the comparison.
+ */
+function matchByName<T extends { player: string; club: string }>(
+  rows: T[],
+  fullName: string,
+  webName: string,
+  clubs: string[],
+): T | null {
+  const target = normalise(fullName);
+  const short = normalise(webName);
+
+  const exact = rows.find((row) => normalise(row.player) === target);
+  if (exact) return exact;
+
+  // Registered names carry extra components and nicknames that a reference
+  // dataset omits: "Yeremy Pino" against "Yeremy Pino Santos", or "Rodri"
+  // against "Rodrigo Rodri Hernandez Cascante". Accept the dataset name when
+  // it appears as a run of whole words inside the registered name.
+  const padded = ` ${target} `;
+  const contained = rows.filter((row) => padded.includes(` ${normalise(row.player)} `));
+  if (contained.length === 1) return contained[0];
+  if (contained.length > 1) {
+    return contained.find((row) => sameClub(row.club, clubs)) ?? null;
+  }
+
+  const surnameMatches = rows.filter((row) => {
+    const name = normalise(row.player);
+    return name === short || name.endsWith(` ${short}`) || target.endsWith(` ${name.split(" ").pop()}`);
+  });
+  if (surnameMatches.length === 1) return surnameMatches[0];
+  if (surnameMatches.length > 1) {
+    return surnameMatches.find((row) => sameClub(row.club, clubs)) ?? null;
+  }
+  return null;
+}
+
+export function findWorkloadRecord(
+  workload: TournamentWorkload,
+  fullName: string,
+  webName: string,
+  ...clubs: string[]
+): WorkloadRecord | null {
+  return matchByName(workload.records, fullName, webName, clubs);
+}
+
+export function findReportedInjury(
+  workload: TournamentWorkload,
+  fullName: string,
+  webName: string,
+  ...clubs: string[]
+) {
+  return matchByName(workload.injuries, fullName, webName, clubs);
+}
+
+/**
+ * Returns the workload adjustment for a player in a given Gameweek, or null
+ * when the player is not in the dataset or the effect has expired.
  */
 export function workloadImpact(
-  regionId: number | null | undefined,
+  identity: { fullName: string; webName: string; club: string; clubName?: string } | null,
   gameweek: number,
   workload: TournamentWorkload = INTERNATIONAL_WORKLOAD,
 ): WorkloadImpact | null {
-  if (regionId === null || regionId === undefined) return null;
-  if (gameweek < workload.firstGameweek || gameweek > workload.lastGameweek) return null;
-  const signal = workload.signals.find((entry) => entry.regionId === regionId);
-  if (!signal) return null;
+  if (!identity) return null;
 
-  const peak = STAGE_IMPACT[signal.stage];
-  if (peak <= 0) return null;
+  const clubs = [identity.clubName ?? "", identity.club].filter(Boolean);
+  const record = findWorkloadRecord(workload, identity.fullName, identity.webName, ...clubs);
+  const injury = findReportedInjury(workload, identity.fullName, identity.webName, ...clubs);
+  if (!record && !injury) return null;
+
+  // A reported medical status caps availability in every Gameweek covered, and
+  // overrides fatigue rather than compounding with it.
+  const ceilingSource = injury?.status ?? record?.injury ?? "";
+  const availabilityCeiling = reportedAvailability(ceilingSource);
 
   const elapsed = gameweek - workload.firstGameweek;
-  const reduction = peak * DECAY_PER_GAMEWEEK ** elapsed;
-  if (reduction < 0.01) return null;
+  const withinFatigueWindow = gameweek >= workload.firstGameweek && gameweek <= workload.lastGameweek;
+  const decay = DECAY_PER_GAMEWEEK ** Math.max(0, elapsed);
+  const reduction = record && withinFatigueWindow && availabilityCeiling === null
+    ? fatigueReduction(record.riskScore) * decay
+    : 0;
+
+  if (availabilityCeiling === null && reduction < 0.01) return null;
+
+  const reasons: string[] = [];
+  if (availabilityCeiling !== null) {
+    reasons.push(
+      `Reported status (${workload.reportDate}): ${(injury?.status ?? record?.injury ?? "").trim()}.`,
+    );
+  } else if (record) {
+    reasons.push(
+      `${workload.tournament} workload: ${record.minutes} tournament minutes, `
+      + `${record.turnaroundDays}-day turnaround, ${record.riskTier} risk. `
+      + `GW${gameweek} start probability reduced ${Math.round(reduction * 100)}%.`,
+    );
+  }
 
   return {
-    nation: signal.nation,
-    stage: signal.stage,
+    player: record?.player ?? injury?.player ?? identity.webName,
     startProbabilityMultiplier: 1 - reduction,
-    minutesWithheld: PEAK_MINUTES_WITHHELD * DECAY_PER_GAMEWEEK ** elapsed,
-    confidence: signal.confidence,
-    reason:
-      `${signal.nation} reached the ${signal.stage.replace(/-/g, " ")} of the ${workload.tournament}; `
-      + `a late return and missed pre-season reduce the GW${gameweek} start probability by `
-      + `${Math.round(reduction * 100)}% and shorten the expected outing.`,
+    availabilityCeiling,
+    // Scales with the load actually carried: a finalist who played six minutes
+    // is not eased back in like one who played every knockout round.
+    minutesWithheld: PEAK_MINUTES_WITHHELD * (reduction / MAX_FATIGUE_REDUCTION),
+    confidence: record?.riskTier === "CRITICAL" || injury ? 0.75 : 0.6,
+    reason: reasons.join(" "),
   };
 }
 
 /**
  * Applies a workload impact to an expected-minutes projection, preserving the
  * invariant that start, substitute and zero-minute probabilities sum to 100.
- * Probability removed from starting is redistributed to a substitute
- * appearance, since a rested player is usually named on the bench rather than
- * left out of the squad entirely.
+ * Probability removed by fatigue moves to a substitute appearance, since a
+ * rested player is usually still named on the bench. Probability removed by a
+ * medical ceiling moves to zero minutes instead.
  */
 export function applyWorkload(
   projection: ExpectedMinutesProjection,
   impact: WorkloadImpact,
 ): ExpectedMinutesProjection {
   const originalStart = projection.startProbability / 100;
-  if (originalStart <= 0) return projection;
+  const originalSubstitute = projection.substituteProbability / 100;
+  if (originalStart <= 0 && originalSubstitute <= 0) return projection;
 
-  const nextStart = clamp(originalStart * impact.startProbabilityMultiplier, 0, 0.98);
-  const released = originalStart - nextStart;
-  const nextSubstitute = clamp(
-    projection.substituteProbability / 100 + released * 0.75,
+  let nextStart = clamp(originalStart * impact.startProbabilityMultiplier, 0, 0.98);
+  let nextSubstitute = clamp(
+    originalSubstitute + (originalStart - nextStart) * 0.75,
     0,
     1 - nextStart,
   );
+
+  if (impact.availabilityCeiling !== null) {
+    const ceiling = impact.availabilityCeiling;
+    const playing = nextStart + nextSubstitute;
+    if (playing > ceiling) {
+      // Scale the whole playing mass down; the remainder becomes zero minutes.
+      const scale = playing > 0 ? ceiling / playing : 0;
+      nextStart *= scale;
+      nextSubstitute *= scale;
+    }
+  }
+
   const minutesIfStart = clamp(
     projection.expectedMinutesIfStart - impact.minutesWithheld,
     45,
@@ -179,4 +332,4 @@ export function applyWorkload(
   };
 }
 
-export const WORKLOAD_MODEL_VERSION = "international-workload-v1";
+export const WORKLOAD_MODEL_VERSION = "international-workload-v2";

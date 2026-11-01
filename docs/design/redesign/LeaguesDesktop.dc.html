@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Leagues — desktop</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;800&amp;family=Geist+Mono:wght@500;600&amp;family=Instrument+Serif&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#11704a}a:hover{color:#0b1410}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid #11704a;outline-offset:2px}
+@keyframes np-pulse{0%{box-shadow:0 0 0 0 rgba(183,243,74,.7)}70%{box-shadow:0 0 0 8px rgba(183,243,74,0)}100%{box-shadow:0 0 0 0 rgba(183,243,74,0)}}
+.live-dot{animation:np-pulse 1.6s infinite}
+@media (prefers-reduced-motion: reduce){.live-dot{animation:none}}
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; background: #f3f5f0; color: #0b1410; font-family: Geist, ui-sans-serif, system-ui, sans-serif; font-variant-numeric: tabular-nums">
+
+  <!-- Rail -->
+  <aside style="flex: 1 1 240px; background: #0b1410; color: #eef5ef; padding: 24px 16px; display: flex; flex-direction: column; gap: 24px; box-sizing: border-box">
+    <div style="font-weight: 800; font-size: 22px; letter-spacing: -.02em; padding: 0 8px">NINETY<span style="color: #b7f34a">+</span></div>
+    <nav aria-label="Main" style="display: flex; flex-direction: column; gap: 4px">
+      <sc-for list="{{ nav }}" as="n" hint-placeholder-count="5">
+        <a href="{{ n.href }}" style="min-height: 44px; display: flex; align-items: center; gap: 12px; padding: 0 12px; border-radius: 10px; text-decoration: none; font-size: 15px; font-weight: 500; color: {{ n.c }}; background: {{ n.bg }}">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ n.icon }}"/></svg>{{ n.label }}
+        </a>
+      </sc-for>
+    </nav>
+    <div style="margin-top: auto; padding: 12px; border: 1px solid #25382f; border-radius: 14px; display: flex; flex-direction: column; gap: 4px">
+      <span style="font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: .08em; color: #a3b6aa">NEXT DEADLINE</span>
+      <span style="font-size: 15px; font-weight: 600">GW 11 · Sat 8 Nov 11:00</span>
+    </div>
+  </aside>
+
+  <!-- Content -->
+  <main style="flex: 999 1 560px; min-width: 0; padding: 24px; box-sizing: border-box">
+    <div style="max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px">
+
+      <header style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <span style="display: flex; align-items: center; gap: 8px; font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: .08em; font-weight: 500; color: #4f5f56"><span class="live-dot" style="width: 8px; height: 8px; border-radius: 9999px; background: #b7f34a; border: 1px solid #0b1410"></span>GW 10 · LIVE · UPDATED 12s AGO</span>
+          <h1 style="margin: 0; font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: 40px; line-height: 44px; letter-spacing: -.01em">Manager of the Month</h1>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px">
+          <button type="button" style="min-height: 36px; display: flex; align-items: center; gap: 6px; padding: 0 12px; border: 1px solid #7f9086; background: #ffffff; border-radius: 10px; font-size: 13px; font-weight: 500; cursor: pointer">Sunday League Legends · 8 managers<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+          <div role="tablist" aria-label="Month" style="display: flex; gap: 4px; padding: 4px; background: #eef2ec; border-radius: 10px">
+            <button type="button" role="tab" aria-selected="false" style="min-height: 28px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; font-size: 13px; font-weight: 500; cursor: pointer">Sep</button>
+            <button type="button" role="tab" aria-selected="true" style="min-height: 28px; padding: 0 12px; border: 0; border-radius: 8px; background: #ffffff; box-shadow: 0 1px 2px rgba(11,20,16,.12); font-size: 13px; font-weight: 500; cursor: pointer">Oct · live</button>
+            <button type="button" role="tab" aria-selected="false" style="min-height: 28px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; font-size: 13px; font-weight: 500; cursor: pointer">Nov</button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Hero row -->
+      <section style="display: flex; flex-wrap: wrap; gap: 12px">
+        <div style="flex: 2 1 440px; min-width: 0; background: #0b1410; color: #eef5ef; border-radius: 20px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+          <span style="font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: .08em; color: #a3b6aa">OCTOBER · GW 7–10 · FINAL GAMEWEEK</span>
+          <p style="margin: 0; font-family: 'Instrument Serif', Georgia, serif; font-size: 48px; line-height: 52px; letter-spacing: -.02em">You're 2nd, 4 pts behind Dan</p>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <div role="img" aria-label="Chance to win October: Dan 41%, you 38%, Priya 12%, others 9%" style="display: flex; height: 10px; gap: 2px; border-radius: 9999px; overflow: hidden"><span style="width: 41%; background: #eef5ef"></span><span style="width: 38%; background: #b7f34a"></span><span style="width: 12%; background: #a3b6aa"></span><span style="width: 9%; background: #2a3d34"></span></div>
+            <div style="display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12px; color: #a3b6aa"><span>Dan 41%</span><span style="color: #b7f34a">You 38%</span><span>Priya 12%</span><span>Others 9%</span></div>
+          </div>
+        </div>
+        <div style="flex: 1 1 200px; background: #ffffff; border: 1px solid #d6ded5; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 4px; box-shadow: 0 1px 2px rgba(11,20,16,.06)">
+          <span style="font-size: 13px; color: #4f5f56">Your GW 10</span>
+          <span style="font-family: 'Instrument Serif', Georgia, serif; font-size: 32px; line-height: 36px">61 pts</span>
+          <span style="font-size: 13px; color: #11704a; font-weight: 500">+9 on Dan this week</span>
+        </div>
+        <div style="flex: 1 1 200px; background: #ffffff; border: 1px solid #d6ded5; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 4px; box-shadow: 0 1px 2px rgba(11,20,16,.06)">
+          <span style="font-size: 13px; color: #4f5f56">Still to play</span>
+          <span style="font-family: 'Instrument Serif', Georgia, serif; font-size: 32px; line-height: 36px">3 v 2</span>
+          <span style="font-size: 13px; color: #4f5f56">Salah (C) is your swing</span>
+        </div>
+      </section>
+
+      <!-- Main grid -->
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+
+        <!-- Standings -->
+        <section aria-label="October standings" style="flex: 2 1 560px; min-width: 0; background: #ffffff; border: 1px solid #d6ded5; border-radius: 14px; box-shadow: 0 1px 2px rgba(11,20,16,.06); overflow: hidden">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px">
+            <h2 style="margin: 0; font-size: 20px; line-height: 26px; font-weight: 600">October standings</h2>
+            <span style="font-size: 12px; color: #4f5f56">Net of hits · live</span>
+          </div>
+          <div style="overflow-x: auto">
+            <table style="width: 100%; min-width: 640px; border-collapse: collapse; font-size: 15px">
+              <thead>
+                <tr style="background: #eef2ec; font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: .08em; color: #4f5f56; text-align: right">
+                  <th scope="col" style="padding: 8px 12px 8px 20px; text-align: left; font-weight: 500">#</th>
+                  <th scope="col" style="padding: 8px 12px; text-align: left; font-weight: 500">MANAGER</th>
+                  <th scope="col" style="padding: 8px 12px; font-weight: 500">GW 10</th>
+                  <th scope="col" style="padding: 8px 12px; font-weight: 500">OCT NET</th>
+                  <th scope="col" style="padding: 8px 12px; font-weight: 500">GAP</th>
+                  <th scope="col" style="padding: 8px 12px; font-weight: 500">HITS</th>
+                  <th scope="col" style="padding: 8px 12px; font-weight: 500">TO PLAY</th>
+                  <th scope="col" style="padding: 8px 20px 8px 12px; font-weight: 500; width: 140px">WIN</th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ rows }}" as="r" hint-placeholder-count="8">
+                  <tr style="border-top: 1px solid #d6ded5; text-align: right; background: {{ r.bg }}; box-shadow: {{ r.bar }}">
+                    <td style="padding: 12px 12px 12px 20px; text-align: left; font-family: 'Geist Mono', monospace; font-weight: 600">
+                      <span style="display: inline-flex; align-items: center; gap: 6px">{{ r.rank }}
+                        <sc-if value="{{ r.up }}" hint-placeholder-val="{{ false }}"><svg width="10" height="8" viewBox="0 0 10 8" role="img" aria-label="Up"><path d="M5 0 10 8H0z" fill="#11704a"/></svg></sc-if>
+                        <sc-if value="{{ r.down }}" hint-placeholder-val="{{ false }}"><svg width="10" height="8" viewBox="0 0 10 8" role="img" aria-label="Down"><path d="M5 8 0 0h10z" fill="#b0362a"/></svg></sc-if>
+                      </span>
+                    </td>
+                    <td style="padding: 12px; text-align: left"><span style="display: flex; flex-direction: column"><span style="font-weight: 600">{{ r.name }}</span><span style="font-size: 13px; color: #4f5f56">{{ r.team }}</span></span></td>
+                    <td style="padding: 12px; font-family: 'Geist Mono', monospace">{{ r.gw }}</td>
+                    <td style="padding: 12px; font-family: 'Geist Mono', monospace; font-size: 17px; font-weight: 600">{{ r.month }}</td>
+                    <td style="padding: 12px; font-family: 'Geist Mono', monospace; color: #4f5f56">{{ r.gap }}</td>
+                    <td style="padding: 12px; font-family: 'Geist Mono', monospace; color: {{ r.hitC }}">{{ r.hits }}</td>
+                    <td style="padding: 12px; font-family: 'Geist Mono', monospace">{{ r.left }}</td>
+                    <td style="padding: 12px 20px 12px 12px">
+                      <span style="display: flex; align-items: center; gap: 8px; justify-content: flex-end">
+                        <span style="flex: 1; max-width: 80px; height: 6px; border-radius: 9999px; background: #e2e8e1; overflow: hidden"><span style="display: block; height: 6px; width: {{ r.winW }}; background: {{ r.winC }}"></span></span>
+                        <span style="font-family: 'Geist Mono', monospace; font-size: 13px; width: 36px">{{ r.win }}</span>
+                      </span>
+                    </td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Side column -->
+        <div style="flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 24px">
+
+          <section style="background: #ffffff; border: 1px solid #d6ded5; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 1px 2px rgba(11,20,16,.06)">
+            <div style="display: flex; justify-content: space-between; align-items: baseline">
+              <h2 style="margin: 0; font-size: 20px; line-height: 26px; font-weight: 600">The race</h2>
+              <span style="font-size: 12px; color: #4f5f56">Cumulative net points</span>
+            </div>
+            <svg viewBox="0 0 384 220" width="100%" role="img" aria-label="Cumulative October points by gameweek. After GW 10 live: Dan 231, you 227, Priya 224, Tom 214." style="display: block; font-family: 'Geist Mono', monospace">
+              <g stroke="#d6ded5" stroke-width="1">
+                <line x1="36" y1="20" x2="300" y2="20"/><line x1="36" y1="80" x2="300" y2="80"/><line x1="36" y1="140" x2="300" y2="140"/><line x1="36" y1="200" x2="300" y2="200"/>
+              </g>
+              <g fill="#4f5f56" font-size="12" text-anchor="end">
+                <text x="30" y="24">240</text><text x="30" y="84">160</text><text x="30" y="144">80</text><text x="30" y="204">0</text>
+              </g>
+              <g fill="#4f5f56" font-size="12" text-anchor="middle">
+                <text x="40" y="218">GW7</text><text x="126" y="218">GW8</text><text x="212" y="218">GW9</text><text x="292" y="218">GW10</text>
+              </g>
+              <polyline points="40,161.8 126,121.3 212,72.5 296,39.5" fill="none" stroke="#b3c0b8" stroke-width="2" stroke-linejoin="round"/>
+              <polyline points="40,153.5 126,111.5 212,67.3 296,32" fill="none" stroke="#7f9086" stroke-width="2" stroke-linejoin="round"/>
+              <polyline points="40,156.5 126,110 212,65.8 296,26.8" fill="none" stroke="#0b1410" stroke-width="2" stroke-linejoin="round"/>
+              <polyline points="40,163.3 126,116 212,75.5 296,29.8" fill="none" stroke="#11704a" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>
+              <circle cx="296" cy="29.8" r="5" fill="#b7f34a" stroke="#11704a" stroke-width="2"/>
+              <g font-size="12" font-weight="600">
+                <text x="304" y="22" fill="#0b1410">Dan 231</text>
+                <text x="304" y="36" fill="#11704a">You 227</text>
+                <text x="304" y="50" fill="#4f5f56">Priya 224</text>
+                <text x="304" y="64" fill="#4f5f56">Tom 214</text>
+              </g>
+            </svg>
+          </section>
+
+          <section aria-live="polite" style="background: #ffffff; border: 1px solid #d6ded5; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 4px; box-shadow: 0 1px 2px rgba(11,20,16,.06)">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 8px">
+              <h2 style="margin: 0; font-size: 20px; line-height: 26px; font-weight: 600">Live swings</h2>
+              <span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #11704a; font-weight: 500"><span style="width: 6px; height: 6px; border-radius: 9999px; background: #11704a"></span>Live</span>
+            </div>
+            <sc-for list="{{ feed }}" as="f" hint-placeholder-count="4">
+              <div style="display: flex; gap: 12px; padding: 10px 0; border-top: 1px solid #d6ded5">
+                <span style="flex: none; width: 44px; font-family: 'Geist Mono', monospace; font-size: 12px; color: #4f5f56; padding-top: 2px">{{ f.t }}</span>
+                <span style="flex: 1; display: flex; flex-direction: column; gap: 4px">
+                  <span style="font-size: 15px; font-weight: 600">{{ f.text }}</span>
+                  <span style="font-size: 13px; color: #4f5f56">{{ f.impact }}</span>
+                </span>
+                <span style="flex: none; align-self: flex-start; font-family: 'Geist Mono', monospace; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 9999px; background: {{ f.pillBg }}; color: {{ f.pillC }}">{{ f.you }}</span>
+              </div>
+            </sc-for>
+          </section>
+        </div>
+      </div>
+
+      <!-- Season strip -->
+      <section style="display: flex; flex-direction: column; gap: 12px">
+        <div style="display: flex; justify-content: space-between; align-items: baseline">
+          <h2 style="margin: 0; font-size: 20px; line-height: 26px; font-weight: 600">Season</h2>
+          <a href="Awards.dc.html" style="font-size: 15px; font-weight: 500">All awards</a>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px">
+          <sc-for list="{{ season }}" as="s" hint-placeholder-count="6">
+            <div style="background: {{ s.bg }}; color: {{ s.fg }}; border: 1px solid {{ s.line }}; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 4px">
+              <span style="font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: .08em; color: {{ s.muted }}">{{ s.eyebrow }}</span>
+              <span style="font-size: 16px; font-weight: 600">{{ s.who }}</span>
+              <span style="font-size: 13px; color: {{ s.muted }}">{{ s.detail }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1500}}'>
+const ICONS = {
+  home: 'M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
+  squad: 'M8 3 3 6l2 4 2-1v12h10V9l2 1 2-4-5-3a4 4 0 0 1-8 0z',
+  players: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4',
+  chips: 'M13 2 4 14h7l-1 8 9-12h-7z',
+  leagues: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3'
+};
+const ROWS = [
+  ['Dan Mercer', 'Mercer Than Ever', 52, 231, 1, 0, 2, 41],
+  ['You', 'Ninety Minutes FC', 61, 227, 3, 4, 3, 38],
+  ['Priya Shah', 'Saka Potatoes', 47, 224, 2, 0, 1, 12],
+  ['Tom Ellis', 'Ellis Island', 44, 214, 4, 8, 2, 6],
+  ['Josh Reid', 'Reid Between the Lines', 58, 206, 6, 12, 3, 3],
+  ['Chloe Barnes', 'Barnes Storming', 39, 198, 5, 0, 0, 0],
+  ['Matt Okafor', 'Okafor the Win', 50, 191, 7, 4, 1, 0],
+  ['Sam Whitley', 'Whit Happens', 33, 177, 8, 0, 2, 0]
+];
+class Component extends DCLogic {
+  renderVals() {
+    const nav = [['Home', 'home', 'Home.dc.html'], ['Squad', 'squad', 'Squad.dc.html'], ['Players', 'players', 'Players.dc.html'], ['Chips', 'chips', 'Chips.dc.html'], ['Leagues', 'leagues', 'LeaguesDesktop.dc.html']]
+      .map(([label, k, href]) => ({ label, href, icon: ICONS[k], c: k === 'leagues' ? '#0b1410' : '#a3b6aa', bg: k === 'leagues' ? '#b7f34a' : 'transparent' }));
+    const lead = ROWS[0][3];
+    const rows = ROWS.map((r, i) => {
+      const you = r[0] === 'You';
+      return {
+        rank: i + 1, name: r[0], team: r[1], gw: r[2], month: r[3],
+        gap: i === 0 ? '—' : '−' + (lead - r[3]),
+        up: i + 1 < r[4], down: i + 1 > r[4],
+        hits: r[5] ? '−' + r[5] : '0', hitC: r[5] ? '#b0362a' : '#4f5f56',
+        left: r[6], win: r[7] ? r[7] + '%' : '<1%', winW: Math.max(r[7], 1) + '%',
+        winC: you ? '#11704a' : '#7f9086',
+        bg: you ? '#e2f0e4' : '#ffffff', bar: you ? 'inset 4px 0 0 #b7f34a' : 'none'
+      };
+    });
+    const pill = (v) => v > 0 ? ['#e2f0e4', '#11704a'] : v < 0 ? ['#fbe6e2', '#b0362a'] : ['#eef2ec', '#4f5f56'];
+    const feed = [
+      ['16:12', 'Saka goal · ARS v WHU', 'Owned by you and Priya. Dan doesn’t own.', 5],
+      ['16:05', 'Isak goal · NEW v BHA', 'Dan +5 · Matt +5', -5],
+      ['15:48', 'Mykolenko clean sheet locked', 'Dan +4 · Tom +4', -4],
+      ['15:31', 'Saka assist · ARS v WHU', 'You +3 · Priya +3', 3]
+    ].map(([t, text, impact, v]) => {
+      const [bg, c] = pill(v);
+      return { t, text, impact, you: v === 0 ? '0' : (v > 0 ? '+' + v + ' you' : '−' + Math.abs(v) + ' gap'), pillBg: bg, pillC: c };
+    });
+    const card = (eyebrow, who, detail, kind) => ({
+      eyebrow, who, detail,
+      bg: kind === 'you' ? '#0b1410' : '#ffffff', fg: kind === 'you' ? '#eef5ef' : '#0b1410',
+      muted: kind === 'you' ? '#a3b6aa' : '#4f5f56', line: kind === 'you' ? '#0b1410' : (kind === 'live' ? '#11704a' : '#d6ded5')
+    });
+    return {
+      nav, rows, feed,
+      season: [
+        card('AUG · GW 1–3', 'Priya Shah', '198 net · winner', 'done'),
+        card('SEP · GW 4–6', 'You', '241 net · winner', 'you'),
+        card('OCT · GW 7–10 · LIVE', 'Dan leads by 4', '38% you take it', 'live'),
+        card('NOV · GW 11–13', 'Starts Sat 11:00', 'Everyone resets to 0', 'next'),
+        card('BEST GAMEWEEK', 'You', '98 pts in GW 4', 'done'),
+        card('BENCH REGRET', 'Tom Ellis', '31 pts benched', 'done')
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

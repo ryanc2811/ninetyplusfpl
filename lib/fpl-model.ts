@@ -32,6 +32,12 @@ import {
   type RawScoringConfig,
   type ScoringRules,
 } from "./scoring-rules.ts";
+import {
+  FALLBACK_CALIBRATION,
+  fitOutputCalibration,
+  type CalibrationSource,
+  type OutputCalibration,
+} from "./calibration.ts";
 
 export type { Position };
 export type FplElement = Record<string, number | string | boolean | null>;
@@ -47,7 +53,7 @@ export type FplFixture = {
   finished: boolean;
 };
 
-export type Team = { id: number; short_name: string };
+export type Team = { id: number; short_name: string; name?: string };
 
 type FixtureContext = {
   fixtureId: number;
@@ -560,6 +566,40 @@ function poissonAtLeast(k: number, mean: number) {
 }
 
 /**
+ * Over-dispersion of match-level defensive action counts, as a variance-to-mean
+ * ratio. Poisson assumes 1.0, which is wrong in a known direction: real counts
+ * vary with game state, opponent and role far more than Poisson allows, so a
+ * player whose average sits below the threshold crosses it more often than
+ * Poisson predicts. 1.6 is a conservative value for counts of this kind and is
+ * the one assumption here that per-match history would replace.
+ */
+const DEFENSIVE_ACTION_DISPERSION = 1.6;
+
+/**
+ * Probability that a negative-binomial count with the given mean and
+ * variance-to-mean ratio is at least `k`. Falls back to Poisson when the ratio
+ * is at or below 1, where the negative binomial is undefined.
+ */
+function negativeBinomialAtLeast(k: number, mean: number, dispersion: number) {
+  if (k <= 0) return 1;
+  if (mean <= 0) return 0;
+  if (dispersion <= 1.0001) return poissonAtLeast(k, mean);
+
+  // Parameterise by success probability p and size r so that
+  // variance = mean / p and mean = r(1 - p) / p.
+  const p = 1 / dispersion;
+  const r = (mean * p) / (1 - p);
+
+  let term = p ** r;
+  let cumulative = term;
+  for (let i = 0; i < k - 1; i += 1) {
+    term *= ((r + i) / (i + 1)) * (1 - p);
+    cumulative += term;
+  }
+  return clamp(1 - cumulative, 0, 1);
+}
+
+/**
  * Expected value of `floor(X / divisor)` for a Poisson variable, used for the
  * goals-conceded penalty which only scores on completed pairs of goals.
  */
@@ -574,26 +614,13 @@ function expectedFloorDivision(mean: number, divisor: number) {
   return total;
 }
 
-/**
- * Expected bonus points from a BPS rate.
- *
- * Bonus is a rank statistic within a match, so it cannot be derived exactly
- * from a season-long rate. This is a smooth monotone fit calibrated so that a
- * high-BPS regular (~35 BPS per 90) earns around one bonus point per start, a
- * mid-table starter (~20) earns around 0.15, and a low-BPS player earns almost
- * none. It is an approximation and is labelled as such in the evidence.
- */
-function expectedBonus(bpsPer90: number) {
-  const MAX = 1.7;
-  const CENTRE = 32;
-  const SCALE = 5;
-  return MAX / (1 + Math.exp(-(bpsPer90 - CENTRE) / SCALE));
-}
-
 export type ProjectionContext = {
   scoring: ScoringRules;
   teamStrengths: Map<number, TeamStrength>;
   ratesByPlayer: Map<number, PlayerRates>;
+  calibration: OutputCalibration;
+  /** Full club names, which reference datasets use in place of short codes. */
+  teamNamesById?: Map<number, string>;
   workload?: TournamentWorkload;
 };
 
@@ -606,11 +633,17 @@ export function buildProjectionContext(
   expectedMinutesByPlayer: Map<number, ExpectedMinutesProjection>,
   scoringConfig?: RawScoringConfig | null,
   workload?: TournamentWorkload,
+  teamNamesById?: Map<number, string>,
 ): ProjectionContext {
+  // Fit the rate-to-output mapping from this snapshot before estimating any
+  // player, so every rate is expressed in realised FPL output.
+  const calibration = fitOutputCalibration(
+    players as unknown as CalibrationSource[],
+  );
   const ratesByPlayer = new Map<number, PlayerRates>();
   const squad = players.map((player) => {
     const position = POSITION_BY_ID[numeric(player.element_type)] || "MID";
-    const rates = estimatePlayerRates(player as unknown as RateSource, position);
+    const rates = estimatePlayerRates(player as unknown as RateSource, position, calibration);
     const playerId = numeric(player.id);
     ratesByPlayer.set(playerId, rates);
     return {
@@ -624,6 +657,8 @@ export function buildProjectionContext(
     scoring: resolveScoringRules(scoringConfig),
     teamStrengths: buildTeamStrengths(squad),
     ratesByPlayer,
+    calibration,
+    teamNamesById,
     workload,
   };
 }
@@ -641,7 +676,6 @@ export function projectFixturePoints(
   fixture: FixtureExpectation,
   teamBaselineExpectedGoals: number,
   teamBaselineExpectedGoalsConceded: number,
-  bpsPer90: number,
   scoring: ScoringRules,
 ): PointsBreakdown {
   const startProbability = minutes.startProbability / 100;
@@ -664,8 +698,8 @@ export function projectFixturePoints(
     playProbability * scoring.shortPlay
     + sixtyProbability * (scoring.longPlay - scoring.shortPlay);
 
-  const goals = rates.expectedGoals * minutesShare * attackScale * scoring.goals[position];
-  const assists = rates.expectedAssists * minutesShare * attackScale * scoring.assists;
+  const goals = rates.goals * minutesShare * attackScale * scoring.goals[position];
+  const assists = rates.assists * minutesShare * attackScale * scoring.assists;
 
   const cleanSheet =
     sixtyProbability * fixture.cleanSheetProbability * scoring.cleanSheets[position];
@@ -690,15 +724,15 @@ export function projectFixturePoints(
   const threshold = scoring.defensiveContributionThreshold[position];
   const defensiveContribution = Number.isFinite(threshold)
     ? startProbability
-      * poissonAtLeast(
+      * negativeBinomialAtLeast(
           Math.ceil(threshold),
           rates.defensiveActions * (minutes.expectedMinutesIfStart / 90),
+          DEFENSIVE_ACTION_DISPERSION,
         )
       * scoring.defensiveContribution[position]
     : 0;
 
-  const bonus =
-    expectedBonus(bpsPer90) * minutesShare * clamp(attackScale, 0.8, 1.25) * scoring.bonus;
+  const bonus = rates.bonus * minutesShare * clamp(attackScale, 0.8, 1.25) * scoring.bonus;
 
   const cards =
     rates.yellowCards * minutesShare * scoring.yellowCards
@@ -752,7 +786,11 @@ export function projectPlayer(
   const scoring = context?.scoring ?? FALLBACK_SCORING_RULES;
   const rates =
     context?.ratesByPlayer.get(playerId)
-    ?? estimatePlayerRates(player as unknown as RateSource, position);
+    ?? estimatePlayerRates(
+      player as unknown as RateSource,
+      position,
+      context?.calibration ?? FALLBACK_CALIBRATION,
+    );
   const teamStrengths = context?.teamStrengths ?? new Map<number, TeamStrength>();
   const strength = teamStrengths.get(teamId);
 
@@ -763,18 +801,15 @@ export function projectPlayer(
   const teamBaselineExpectedGoalsConceded =
     LEAGUE_GOALS_PER_TEAM * (strength?.defenceWeakness ?? 1);
 
-  const observedMinutes = numeric(player.minutes);
-  const bpsPer90 = observedMinutes > 0
-    ? (numeric(player.bps) * 90) / observedMinutes
-    : 0;
-
   // Workload is a minutes effect, so it is applied per Gameweek before the
   // scoring components are evaluated.
-  const impact = workloadImpact(
-    player.region === null || player.region === undefined ? null : numeric(player.region),
-    nextEvent,
-    context?.workload,
-  );
+  const identity = {
+    fullName: `${String(player.first_name ?? "")} ${String(player.second_name ?? "")}`.trim(),
+    webName: String(player.web_name ?? ""),
+    club: teams.get(teamId) ?? "",
+    clubName: context?.teamNamesById?.get(teamId),
+  };
+  const impact = workloadImpact(identity, nextEvent, context?.workload);
   const expectedMinutes = impact ? applyWorkload(baseMinutes, impact) : baseMinutes;
 
   // A stored match forecast from the trained team model is a better estimate
@@ -805,13 +840,7 @@ export function projectPlayer(
     const gameweekMinutes = index === 0
       ? expectedMinutes
       : (() => {
-          const laterImpact = workloadImpact(
-            player.region === null || player.region === undefined
-              ? null
-              : numeric(player.region),
-            fixture.event,
-            context?.workload,
-          );
+          const laterImpact = workloadImpact(identity, fixture.event, context?.workload);
           return laterImpact ? applyWorkload(baseMinutes, laterImpact) : baseMinutes;
         })();
     return projectFixturePoints(
@@ -821,7 +850,6 @@ export function projectPlayer(
       fixtureExpectations[index],
       teamBaselineExpectedGoals,
       teamBaselineExpectedGoalsConceded,
-      bpsPer90,
       scoring,
     );
   });

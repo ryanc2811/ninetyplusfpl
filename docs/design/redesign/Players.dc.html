@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Players</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;800&amp;family=Geist+Mono:wght@500;600&amp;family=Instrument+Serif&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#11704a}a:hover{color:#0b1410}
+button,input{font:inherit;color:inherit}
+input::placeholder{color:#9aa79f}
+:focus-visible{outline:2px solid #11704a;outline-offset:2px}
+</style>
+</helmet>
+<div style="width: 390px; height: 1040px; display: flex; flex-direction: column; background: #f3f5f0; color: #0b1410; font-family: Geist, ui-sans-serif, system-ui, sans-serif; font-variant-numeric: tabular-nums">
+
+  <header style="flex: none; padding: 12px 16px; background: rgba(243,245,240,.9); border-bottom: 1px solid #d6ded5; display: flex; flex-direction: column; gap: 10px">
+    <span style="font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: .08em; font-weight: 500; color: #4f5f56">GW 11 · DEADLINE SAT 11:00</span>
+    <h1 style="margin: 0; font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: 28px; line-height: 32px">Players</h1>
+    <label style="position: relative; display: block">
+      <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Search players</span>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4f5f56" stroke-width="1.75" stroke-linecap="round" aria-hidden="true" style="position: absolute; left: 12px; top: 12px"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+      <input type="search" placeholder="Search players or clubs" style="width: 100%; box-sizing: border-box; height: 44px; padding: 0 12px 0 40px; border: 1px solid #7f9086; border-radius: 10px; background: #ffffff; font-size: 16px">
+    </label>
+    <div style="display: flex; gap: 8px; overflow-x: auto">
+      <sc-for list="{{ chips }}" as="c" hint-placeholder-count="5">
+        <button type="button" aria-pressed="{{ c.pressed }}" onClick="{{ c.pick }}" style="flex: none; min-height: 36px; padding: 0 14px; border-radius: 9999px; font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid {{ c.line }}; background: {{ c.bg }}; color: {{ c.fg }}">{{ c.label }}</button>
+      </sc-for>
+    </div>
+  </header>
+
+  <main style="flex: 1; padding: 12px 16px; display: flex; flex-direction: column; gap: 12px">
+
+    <div style="display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 14px; background: #fbeed3">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#865500" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h11l-3-3M17 17H6l3 3"/></svg>
+      <span style="flex: 1; font-size: 13px; line-height: 18px">Replacing <strong>Gvardiol</strong> · up to £7.2m · DEF only</span>
+      <a href="Squad.dc.html" style="min-height: 44px; display: flex; align-items: center; font-size: 13px; font-weight: 600">Cancel</a>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: center">
+      <span style="font-size: 13px; color: #4f5f56">{{ count }} players · sorted by xP</span>
+      <div role="tablist" aria-label="Horizon" style="display: flex; gap: 4px; padding: 4px; background: #eef2ec; border-radius: 10px">
+        <sc-for list="{{ horizons }}" as="h" hint-placeholder-count="2">
+          <button type="button" role="tab" aria-selected="{{ h.sel }}" onClick="{{ h.pick }}" style="min-height: 36px; padding: 0 12px; border: 0; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; background: {{ h.bg }}; box-shadow: {{ h.sh }}">{{ h.label }}</button>
+        </sc-for>
+      </div>
+    </div>
+
+    <section style="background: #ffffff; border: 1px solid #d6ded5; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 2px rgba(11,20,16,.06)">
+      <sc-for list="{{ rows }}" as="r" hint-placeholder-count="8">
+        <button type="button" aria-label="{{ r.aria }}" style="width: 100%; min-height: 64px; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 0; border-top: 1px solid #d6ded5; background: #ffffff; text-align: left; cursor: pointer">
+          <span style="width: 40px; height: 40px; flex: none; border-radius: 9999px; background: #e2e8e1; display: flex; align-items: center; justify-content: center; font-family: 'Geist Mono', monospace; font-size: 12px; font-weight: 600">{{ r.club }}</span>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+            <span style="display: flex; align-items: center; gap: 6px; font-size: 16px; font-weight: 600">{{ r.name }}
+              <sc-if value="{{ r.owned }}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; font-weight: 500; padding: 0 6px; border-radius: 9999px; background: #eef2ec; color: #4f5f56">Yours</span></sc-if>
+            </span>
+            <span style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: #4f5f56">{{ r.meta }}
+              <span style="padding: 1px 6px; border-radius: 6px; font-family: 'Geist Mono', monospace; font-size: 12px; font-weight: 600; background: {{ r.fbg }}; color: {{ r.fc }}">{{ r.fix }}</span>
+            </span>
+          </span>
+          <span style="flex: none; display: flex; flex-direction: column; align-items: flex-end">
+            <span style="font-family: 'Geist Mono', monospace; font-size: 17px; font-weight: 600; color: #11704a">{{ r.xp }}</span>
+            <span style="font-size: 12px; color: #4f5f56">xP</span>
+          </span>
+        </button>
+      </sc-for>
+    </section>
+    <p style="margin: 0; font-size: 12px; color: #4f5f56">Baseline model · tap a player for the points breakdown and evidence.</p>
+  </main>
+
+  <nav aria-label="Main" style="flex: none; height: 64px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: rgba(243,245,240,.95); border-top: 1px solid #d6ded5">
+    <a href="Home.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #4f5f56; text-decoration: none; font-size: 12px; font-weight: 500"><span style="width: 56px; height: 30px; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></span>Home</a>
+    <a href="Squad.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #4f5f56; text-decoration: none; font-size: 12px; font-weight: 500"><span style="width: 56px; height: 30px; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 3 6l2 4 2-1v12h10V9l2 1 2-4-5-3a4 4 0 0 1-8 0z"/></svg></span>Squad</a>
+    <a href="Players.dc.html" aria-current="page" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #0b1410; text-decoration: none; font-size: 12px; font-weight: 600"><span style="width: 56px; height: 30px; border-radius: 9999px; background: #b7f34a; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span>Players</a>
+    <a href="Chips.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #4f5f56; text-decoration: none; font-size: 12px; font-weight: 500"><span style="width: 56px; height: 30px; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></span>Chips</a>
+    <a href="Main.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #4f5f56; text-decoration: none; font-size: 12px; font-weight: 500"><span style="width: 56px; height: 30px; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg></span>Leagues</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1040}}'>
+const FDR = { 1: ['#0f6b45', '#ffffff'], 2: ['#7fd6a4', '#0b1410'], 3: ['#e2e8e1', '#0b1410'], 4: ['#ff9e80', '#0b1410'], 5: ['#8f1d2c', '#ffffff'] };
+// name, club, pos, price, fixture, fdr, xP 1GW, xP 3GW, owned
+const P = [
+  ['Gabriel', 'ARS', 'DEF', 6.4, 'BUR', 2, 5.1, 14.6, true],
+  ['Virgil', 'LIV', 'DEF', 6.1, 'BRE', 2, 4.8, 12.9],
+  ['Gvardiol', 'MCI', 'DEF', 6.2, 'liv', 4, 3.2, 10.8, true],
+  ['Timber', 'ARS', 'DEF', 5.7, 'BUR', 2, 4.7, 13.8],
+  ['Gusto', 'CHE', 'DEF', 5.0, 'bur', 2, 4.4, 12.2],
+  ['Muñoz', 'CRY', 'DEF', 5.6, 'WHU', 3, 4.1, 11.4],
+  ['Hall', 'NEW', 'DEF', 4.8, 'tot', 4, 3.8, 11.1, true],
+  ['Cucurella', 'CHE', 'DEF', 6.0, 'bur', 2, 4.3, 12.0],
+  ['Salah', 'LIV', 'MID', 13.4, 'BRE', 2, 7.4, 19.6, true],
+  ['Palmer', 'CHE', 'MID', 10.6, 'bur', 2, 6.3, 18.1],
+  ['Haaland', 'MCI', 'FWD', 14.6, 'liv', 4, 6.6, 18.9, true]
+];
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { pos: 'DEF', h: 1 }; }
+  renderVals() {
+    const st = this.state || {};
+    const pos = st.pos || 'DEF';
+    const h = st.h || 1;
+    const list = P.filter((p) => pos === 'All' || p[2] === pos)
+      .map((p) => ({ p, xp: h === 1 ? p[6] : p[7] }))
+      .sort((a, b) => b.xp - a.xp);
+    return {
+      chips: ['All', 'GK', 'DEF', 'MID', 'FWD'].map((c) => ({
+        label: c, pressed: c === pos ? 'true' : 'false',
+        bg: c === pos ? '#0b1410' : '#ffffff', fg: c === pos ? '#eef5ef' : '#0b1410', line: c === pos ? '#0b1410' : '#7f9086',
+        pick: () => this.setState({ pos: c })
+      })),
+      horizons: [[1, 'Next GW'], [3, 'Next 3']].map(([k, label]) => ({
+        label, sel: h === k ? 'true' : 'false', bg: h === k ? '#ffffff' : 'transparent', sh: h === k ? '0 1px 2px rgba(11,20,16,.12)' : 'none',
+        pick: () => this.setState({ h: k })
+      })),
+      count: list.length,
+      rows: list.map(({ p, xp }) => ({
+        name: p[0], club: p[1], meta: p[1] + ' · ' + p[2] + ' · £' + p[3].toFixed(1) + 'm',
+        fix: p[4] + ' ' + p[5], fbg: FDR[p[5]][0], fc: FDR[p[5]][1],
+        xp: xp.toFixed(1), owned: !!p[8],
+        aria: p[0] + ', ' + p[1] + ', ' + p[2] + ', £' + p[3].toFixed(1) + 'm, ' + xp.toFixed(1) + ' expected points'
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,6 +1,7 @@
 import type {
   Badge,
   ManagerInsight,
+  MonthGameweek,
   ManagerSeason,
   MonthlyResult,
   MonthlyStanding,
@@ -75,8 +76,30 @@ function gameweekRange(start: number, stop: number) {
 }
 
 /**
- * Ranks managers within one month window. Ties share a rank, and the next rank
- * skips accordingly.
+ * Orders rows by net points and assigns ranks. Ties share a rank and the next
+ * rank skips accordingly, because two managers level on net points have not
+ * finished one ahead of the other.
+ */
+export function assignRanks<T extends { netPoints: number; teamName: string }>(rows: T[]) {
+  rows.sort((a, b) => b.netPoints - a.netPoints || a.teamName.localeCompare(b.teamName));
+  let rank = 0;
+  let previousPoints: number | null = null;
+  const ranked = rows.map((row, index) => {
+    if (previousPoints === null || row.netPoints !== previousPoints) {
+      rank = index + 1;
+      previousPoints = row.netPoints;
+    }
+    return { row, rank };
+  });
+  return ranked;
+}
+
+/**
+ * Ranks managers within one month window.
+ *
+ * `previousRank` is the same ranking with the most recent scored Gameweek
+ * removed, so the movement arrow answers "where were they before this
+ * Gameweek" rather than comparing against an unrelated overall rank.
  */
 export function monthlyStandings(
   month: MonthWindow,
@@ -84,7 +107,9 @@ export function monthlyStandings(
 ): MonthlyStanding[] {
   const range = new Set(gameweekRange(month.startEvent, month.stopEvent));
   const rows = seasons.map((season) => {
-    const weeks = season.gameweeks.filter((week) => range.has(week.event));
+    const weeks = season.gameweeks
+      .filter((week) => range.has(week.event))
+      .sort((a, b) => a.event - b.event);
     const grossPoints = weeks.reduce((sum, week) => sum + week.points, 0);
     const transferCost = weeks.reduce((sum, week) => sum + week.transferCost, 0);
     return {
@@ -97,20 +122,48 @@ export function monthlyStandings(
       transferCost,
       pointsOnBench: weeks.reduce((sum, week) => sum + week.pointsOnBench, 0),
       gameweeksCounted: weeks.length,
+      previousRank: null as number | null,
+      gameweeks: weeks.map<MonthGameweek>((week) => ({
+        event: week.event,
+        points: week.points,
+        netPoints: week.netPoints,
+      })),
     };
   });
 
-  rows.sort((a, b) => b.netPoints - a.netPoints || a.teamName.localeCompare(b.teamName));
-  let rank = 0;
-  let previousPoints: number | null = null;
-  rows.forEach((row, index) => {
-    if (previousPoints === null || row.netPoints !== previousPoints) {
-      rank = index + 1;
-      previousPoints = row.netPoints;
-    }
-    row.rank = rank;
-  });
-  return rows;
+  const ranked = assignRanks(rows);
+  for (const { row, rank } of ranked) row.rank = rank;
+
+  const scored = new Set(rows.flatMap((row) => row.gameweeks.map((week) => week.event)));
+  if (scored.size > 1) {
+    const latest = Math.max(...scored);
+    const before = assignRanks(
+      rows.map((row) => ({
+        entryId: row.entryId,
+        teamName: row.teamName,
+        netPoints: row.gameweeks
+          .filter((week) => week.event < latest)
+          .reduce((sum, week) => sum + week.netPoints, 0),
+      })),
+    );
+    const rankByEntry = new Map(before.map(({ row, rank }) => [row.entryId, rank]));
+    for (const row of rows) row.previousRank = rankByEntry.get(row.entryId) ?? null;
+  }
+
+  return rows.sort((a, b) => a.rank - b.rank || a.teamName.localeCompare(b.teamName));
+}
+
+/**
+ * Month windows the season has not reached yet, earliest first. A manager
+ * still needs to see that November exists and when it starts.
+ */
+export function upcomingMonthWindows(
+  phases: RawPhase[],
+  events: EventStatus[],
+): MonthWindow[] {
+  return monthWindows(phases, events)
+    .filter((month) => month.gameweeksPlayed === 0)
+    .sort((a, b) => a.startEvent - b.startEvent);
 }
 
 export function monthlyResults(

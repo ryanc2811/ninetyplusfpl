@@ -1,0 +1,11 @@
+{
+  "source": "Fantasy Football Hub",
+  "gameweek": 1,
+  "capturedAt": "2026-07-31",
+  "note": "Evaluation data only. The model must never read this file; scripts/benchmark-report.mjs and tests/benchmark.test.ts are the only consumers. Add rows as reference projections are observed — the report is more useful the more players it covers, and a handful of players cannot distinguish systematic bias from noise.",
+  "entries": [
+    { "player": "Haaland", "team": "MCI", "projected": 7.9 },
+    { "player": "Gabriel", "team": "ARS", "projected": 6.4 },
+    { "player": "João Pedro", "team": "CHE", "projected": 4.0 }
+  ]
+}

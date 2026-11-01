@@ -140,6 +140,23 @@ The web projection is an additive expected-value model, described in
 transparent baseline, not a trained production model, and has not yet been
 backtested against realised season outcomes.
 
+Rates are calibrated to realised FPL output rather than to expected metrics
+([ADR 0012](docs/adr/0012-output-calibration-and-benchmarking.md)). The mapping
+from xG, xA and BPS to realised goals, assists and bonus is fitted from each
+snapshot, so it tracks the league rather than a constant chosen once.
+
+Compare projections against a reference source with:
+
+```bash
+npm run benchmark
+```
+
+Benchmark files under `data/benchmarks/` are **evaluation data only**. No module
+under `lib/` may import them and a test enforces that, because fitting to a
+competitor's numbers would replace a measurable model with an unmeasurable copy
+of someone else's. The report is only as informative as the number of reference
+rows it has; a handful of players cannot separate systematic bias from noise.
+
 International tournament workload
 ([ADR 0011](docs/adr/0011-international-tournament-workload.md)) ships with a
 deliberately incomplete signal table. Only nations verified from a stated source

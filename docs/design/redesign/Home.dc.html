@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Home</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;800&amp;family=Geist+Mono:wght@500;600&amp;family=Instrument+Serif&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#11704a}a:hover{color:#0b1410}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid #11704a;outline-offset:2px}
+@keyframes np-pulse{0%{box-shadow:0 0 0 0 rgba(183,243,74,.7)}70%{box-shadow:0 0 0 8px rgba(183,243,74,0)}100%{box-shadow:0 0 0 0 rgba(183,243,74,0)}}
+.live-dot{animation:np-pulse 1.6s infinite}
+@media (prefers-reduced-motion: reduce){.live-dot{animation:none}}
+</style>
+</helmet>
+<div style="width: 390px; height: 1240px; display: flex; flex-direction: column; background: #f3f5f0; color: #0b1410; font-family: Geist, ui-sans-serif, system-ui, sans-serif; font-variant-numeric: tabular-nums">
+
+  <header style="flex: none; padding: 12px 16px; background: rgba(243,245,240,.9); border-bottom: 1px solid #d6ded5; display: flex; align-items: center; justify-content: space-between; gap: 12px">
+    <div style="display: flex; flex-direction: column; gap: 2px">
+      <span style="font-weight: 800; font-size: 20px; letter-spacing: -.02em; display: flex; align-items: center; gap: 2px">NINETY<span style="width: 18px; height: 18px; border-radius: 4px; background: #b7f34a; color: #0b1410; display: inline-flex; align-items: center; justify-content: center; font-size: 16px">+</span></span>
+      <span style="font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: .08em; font-weight: 500; color: #4f5f56">GW 11 · DEADLINE SAT 11:00</span>
+    </div>
+    <button type="button" aria-label="Account" style="width: 44px; height: 44px; border-radius: 9999px; border: 0; background: #e2e8e1; font-weight: 600; font-size: 15px; cursor: pointer">RC</button>
+  </header>
+
+  <main style="flex: 1; padding: 16px; display: flex; flex-direction: column; gap: 24px">
+
+    <!-- Live month card -->
+    <a href="Main.dc.html" aria-label="October race, live. You are 2nd, 4 points behind Dan. Open the live table." style="display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 20px; background: #0b1410; color: #eef5ef; text-decoration: none">
+      <span style="display: flex; justify-content: space-between; align-items: center; font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: .08em; color: #a3b6aa">
+        <span>MANAGER OF THE MONTH · OCT</span>
+        <span style="display: flex; align-items: center; gap: 6px; color: #b7f34a"><span class="live-dot" style="width: 8px; height: 8px; border-radius: 9999px; background: #b7f34a"></span>LIVE</span>
+      </span>
+      <span style="font-family: 'Instrument Serif', Georgia, serif; font-size: 30px; line-height: 34px">2nd, 4 behind Dan</span>
+      <span style="display: flex; flex-direction: column; border-top: 1px solid #25382f">
+        <sc-for list="{{ mini }}" as="m" hint-placeholder-count="3">
+          <span style="min-height: 40px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #25382f; font-size: 15px">
+            <span style="width: 16px; font-family: 'Geist Mono', monospace; color: #a3b6aa">{{ m.rank }}</span>
+            <span style="flex: 1; font-weight: {{ m.weight }}; color: {{ m.c }}">{{ m.name }}</span>
+            <span style="font-family: 'Geist Mono', monospace; font-size: 13px; color: #a3b6aa">GW {{ m.gw }}</span>
+            <span style="width: 40px; text-align: right; font-family: 'Geist Mono', monospace; font-weight: 600; color: {{ m.c }}">{{ m.pts }}</span>
+          </span>
+        </sc-for>
+      </span>
+      <span style="display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #a3b6aa">
+        <span>Salah (C) still to play · 38% to win</span>
+        <span style="display: flex; align-items: center; gap: 4px; color: #eef5ef; font-weight: 600">Live table<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></span>
+      </span>
+    </a>
+
+    <!-- GW 11 projection -->
+    <section style="display: flex; flex-direction: column; gap: 4px">
+      <span style="font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: .08em; color: #4f5f56">GW 11 · YOUR PROJECTION</span>
+      <span style="font-family: 'Instrument Serif', Georgia, serif; font-size: 40px; line-height: 44px; letter-spacing: -.02em">58.4 pts</span>
+      <span style="font-size: 13px; color: #4f5f56">Likely range 38–81 · league average 51.2</span>
+    </section>
+
+    <!-- Signal -->
+    <section style="display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 14px; background: #e2f0e4; border: 1px solid #c3dfc8">
+      <span style="display: flex; align-items: center; gap: 8px; font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: .08em; color: #11704a">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 17 6-6 4 4 8-8M15 7h6v6"/></svg>THE MODEL SUGGESTS
+      </span>
+      <p style="margin: 0; font-size: 16px; line-height: 22px; font-weight: 600">Mbeumo → Palmer adds +3.4 xP over the next three gameweeks.</p>
+      <p style="margin: 0; font-size: 13px; line-height: 18px; color: #4f5f56">Palmer faces BUR (2), FUL (2), WOL (2). Uses 1 of your 2 free transfers, £0.3m left in the bank.</p>
+      <div style="display: flex; gap: 8px">
+        <a href="Squad.dc.html" style="flex: 1; min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 10px; background: #0b1410; color: #eef5ef; font-weight: 600; font-size: 15px; text-decoration: none">Make transfer</a>
+        <button type="button" style="min-height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid #7f9086; background: #ffffff; font-weight: 600; font-size: 15px; cursor: pointer">Why?</button>
+      </div>
+    </section>
+
+    <!-- Stats -->
+    <section style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+      <sc-for list="{{ stats }}" as="s" hint-placeholder-count="4">
+        <div style="background: #ffffff; border: 1px solid #d6ded5; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 4px; box-shadow: 0 1px 2px rgba(11,20,16,.06)">
+          <span style="font-size: 13px; color: #4f5f56">{{ s.label }}</span>
+          <span style="font-family: 'Instrument Serif', Georgia, serif; font-size: 32px; line-height: 36px">{{ s.value }}</span>
+          <span style="font-size: 12px; color: {{ s.c }}">{{ s.note }}</span>
+        </div>
+      </sc-for>
+    </section>
+
+    <!-- Fixture ticker -->
+    <section style="display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; justify-content: space-between; align-items: baseline">
+        <h2 style="margin: 0; font-size: 20px; line-height: 26px; font-weight: 600">Your fixtures</h2>
+        <span style="font-size: 13px; color: #4f5f56">GW 11–13</span>
+      </div>
+      <div style="background: #ffffff; border: 1px solid #d6ded5; border-radius: 14px; overflow: hidden">
+        <sc-for list="{{ fx }}" as="f" hint-placeholder-count="4">
+          <div style="min-height: 52px; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-top: 1px solid #d6ded5">
+            <span style="flex: 1; font-size: 15px; font-weight: 600">{{ f.name }}</span>
+            <sc-for list="{{ f.games }}" as="g" hint-placeholder-count="3">
+              <span style="width: 64px; min-height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; gap: 4px; font-family: 'Geist Mono', monospace; font-size: 12px; font-weight: 600; background: {{ g.bg }}; color: {{ g.c }}">{{ g.opp }} {{ g.d }}</span>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </main>
+
+  <nav aria-label="Main" style="flex: none; height: 64px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: rgba(243,245,240,.95); border-top: 1px solid #d6ded5">
+    <a href="Home.dc.html" aria-current="page" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #0b1410; text-decoration: none; font-size: 12px; font-weight: 600"><span style="width: 56px; height: 30px; border-radius: 9999px; background: #b7f34a; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></span>Home</a>
+    <a href="Squad.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #4f5f56; text-decoration: none; font-size: 12px; font-weight: 500"><span style="width: 56px; height: 30px; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 3 6l2 4 2-1v12h10V9l2 1 2-4-5-3a4 4 0 0 1-8 0z"/></svg></span>Squad</a>
+    <a href="Players.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #4f5f56; text-decoration: none; font-size: 12px; font-weight: 500"><span style="width: 56px; height: 30px; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span>Players</a>
+    <a href="Chips.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #4f5f56; text-decoration: none; font-size: 12px; font-weight: 500"><span style="width: 56px; height: 30px; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></span>Chips</a>
+    <a href="Main.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #4f5f56; text-decoration: none; font-size: 12px; font-weight: 500"><span style="position: relative; width: 56px; height: 30px; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg><span class="live-dot" aria-label="Live" style="position: absolute; top: 2px; right: 12px; width: 8px; height: 8px; border-radius: 9999px; background: #b7f34a; border: 1px solid #0b1410"></span></span>Leagues</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1240}}'>
+const FDR = { 1: ['#0f6b45', '#ffffff'], 2: ['#7fd6a4', '#0b1410'], 3: ['#e2e8e1', '#0b1410'], 4: ['#ff9e80', '#0b1410'], 5: ['#8f1d2c', '#ffffff'] };
+const g = (opp, d) => ({ opp, d, bg: FDR[d][0], c: FDR[d][1] });
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      mini: [
+        { rank: 1, name: 'Dan Mercer', gw: 52, pts: 231, c: '#eef5ef', weight: 500 },
+        { rank: 2, name: 'You', gw: 61, pts: 227, c: '#b7f34a', weight: 700 },
+        { rank: 3, name: 'Priya Shah', gw: 47, pts: 224, c: '#eef5ef', weight: 500 }
+      ],
+      stats: [
+        { label: 'Bank', value: '£1.2m', note: 'Squad value £101.4m', c: '#4f5f56' },
+        { label: 'Free transfers', value: '2', note: 'Rolled from GW 10', c: '#4f5f56' },
+        { label: 'Overall rank', value: '182k', note: '▲ 41k this week', c: '#11704a' },
+        { label: 'Flagged', value: '1', note: 'Gvardiol 75% · knock', c: '#865500' }
+      ],
+      fx: [
+        { name: 'Salah', games: [g('BRE', 2), g('mci', 4), g('SUN', 2)] },
+        { name: 'Haaland', games: [g('liv', 4), g('NFO', 2), g('ars', 5)] },
+        { name: 'Saka', games: [g('BUR', 2), g('ful', 2), g('WOL', 2)] },
+        { name: 'Gvardiol', games: [g('liv', 4), g('NFO', 2), g('ars', 5)] }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

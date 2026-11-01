@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chips</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;800&amp;family=Geist+Mono:wght@500;600&amp;family=Instrument+Serif&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#11704a}a:hover{color:#0b1410}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid #11704a;outline-offset:2px}
+</style>
+</helmet>
+<div style="width: 390px; height: 1040px; display: flex; flex-direction: column; background: #f3f5f0; color: #0b1410; font-family: Geist, ui-sans-serif, system-ui, sans-serif; font-variant-numeric: tabular-nums">
+
+  <header style="flex: none; padding: 12px 16px; background: rgba(243,245,240,.9); border-bottom: 1px solid #d6ded5; display: flex; flex-direction: column; gap: 6px">
+    <span style="font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: .08em; font-weight: 500; color: #4f5f56">GW 11 · DEADLINE SAT 11:00</span>
+    <h1 style="margin: 0; font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: 28px; line-height: 32px">Chips</h1>
+  </header>
+
+  <main style="flex: 1; padding: 16px; display: flex; flex-direction: column; gap: 16px">
+
+    <section aria-label="Your chips" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+      <sc-for list="{{ chips }}" as="c" hint-placeholder-count="4">
+        <button type="button" aria-pressed="{{ c.pressed }}" onClick="{{ c.pick }}" style="min-height: 120px; padding: 14px; border-radius: 14px; text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 6px; border: 1px solid {{ c.line }}; background: {{ c.bg }}; color: {{ c.fg }}">
+          <span style="display: flex; justify-content: space-between; align-items: center; width: 100%">
+            <span style="font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: .08em; color: {{ c.muted }}">{{ c.status }}</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>
+          </span>
+          <span style="font-size: 16px; font-weight: 600">{{ c.name }}</span>
+          <span style="font-size: 13px; color: {{ c.muted }}">{{ c.best }}</span>
+          <span style="font-family: 'Geist Mono', monospace; font-size: 15px; font-weight: 600; color: {{ c.gainC }}">{{ c.gain }}</span>
+        </button>
+      </sc-for>
+    </section>
+
+    <!-- Timeline -->
+    <section style="background: #ffffff; border: 1px solid #d6ded5; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 1px 2px rgba(11,20,16,.06)">
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <span style="font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: .08em; color: #4f5f56">{{ sel.name }} · EXPECTED GAIN BY GW</span>
+        <h2 style="margin: 0; font-size: 20px; line-height: 26px; font-weight: 600">{{ sel.headline }}</h2>
+      </div>
+      <div role="img" aria-label="{{ sel.aria }}" style="height: 140px; display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 6px; align-items: end">
+        <sc-for list="{{ bars }}" as="b" hint-placeholder-count="9">
+          <span style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; height: 100%">
+            <span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: {{ b.lc }}">{{ b.v }}</span>
+            <span style="width: 100%; border-radius: 4px 4px 0 0; height: {{ b.h }}; background: {{ b.c }}; transition: height 220ms ease"></span>
+          </span>
+        </sc-for>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 6px; border-top: 1px solid #d6ded5; padding-top: 6px">
+        <sc-for list="{{ bars }}" as="b" hint-placeholder-count="9">
+          <span style="text-align: center; font-family: 'Geist Mono', monospace; font-size: 12px; color: {{ b.gwC }}; font-weight: {{ b.gwW }}">{{ b.gw }}</span>
+        </sc-for>
+      </div>
+      <p style="margin: 0; font-size: 15px; line-height: 22px">{{ sel.why }}</p>
+    </section>
+
+    <!-- League angle -->
+    <section style="background: #0b1410; color: #eef5ef; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 8px">
+      <span style="font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: .08em; color: #a3b6aa">MANAGER OF THE MONTH ANGLE</span>
+      <p style="margin: 0; font-size: 15px; line-height: 22px">GW 16 falls in <strong>December</strong>. Dan and Priya have both used their Bench Boost — playing yours then is a <span style="color: #b7f34a; font-weight: 600">+12.4 pt</span> edge in that month’s race.</p>
+      <a href="Awards.dc.html" style="color: #eef5ef; font-size: 13px; font-weight: 600; min-height: 44px; display: flex; align-items: center">See who has which chips left</a>
+    </section>
+  </main>
+
+  <div style="flex: none; padding: 12px 16px; background: rgba(243,245,240,.95); border-top: 1px solid #d6ded5">
+    <button type="button" style="width: 100%; min-height: 44px; border: 0; border-radius: 10px; background: #0b1410; color: #eef5ef; font-weight: 600; font-size: 15px; cursor: pointer">{{ sel.cta }}</button>
+  </div>
+
+  <nav aria-label="Main" style="flex: none; height: 64px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: rgba(243,245,240,.95); border-top: 1px solid #d6ded5">
+    <a href="Home.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #4f5f56; text-decoration: none; font-size: 12px; font-weight: 500"><span style="width: 56px; height: 30px; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></span>Home</a>
+    <a href="Squad.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #4f5f56; text-decoration: none; font-size: 12px; font-weight: 500"><span style="width: 56px; height: 30px; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 3 6l2 4 2-1v12h10V9l2 1 2-4-5-3a4 4 0 0 1-8 0z"/></svg></span>Squad</a>
+    <a href="Players.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #4f5f56; text-decoration: none; font-size: 12px; font-weight: 500"><span style="width: 56px; height: 30px; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span>Players</a>
+    <a href="Chips.dc.html" aria-current="page" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #0b1410; text-decoration: none; font-size: 12px; font-weight: 600"><span style="width: 56px; height: 30px; border-radius: 9999px; background: #b7f34a; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></span>Chips</a>
+    <a href="Main.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #4f5f56; text-decoration: none; font-size: 12px; font-weight: 500"><span style="width: 56px; height: 30px; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg></span>Leagues</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1040}}'>
+const CHIPS = {
+  bb: { name: 'Bench Boost', best: 16, vals: [7.1, 6.4, 8.0, 7.2, 9.3, 12.4, 6.8, 7.5, 8.1], why: 'Your bench all play twice in GW 16 (DGW for NFO and CRY). Hold until then.', cta: 'Plan Bench Boost for GW 16' },
+  tc: { name: 'Triple Captain', best: 14, vals: [7.4, 6.1, 5.9, 9.8, 6.3, 7.0, 5.6, 6.0, 6.6], why: 'Salah at home to SUN in GW 14 is the softest captaincy window before Christmas.', cta: 'Plan Triple Captain for GW 14' },
+  fh: { name: 'Free Hit', best: 18, vals: [4.2, 3.8, 5.1, 4.4, 5.6, 6.0, 4.9, 14.2, 5.3], why: 'GW 18 is a blank for 4 of your starters. A Free Hit fields a full XI.', cta: 'Plan Free Hit for GW 18' },
+  wc: { name: 'Wildcard', best: 0, vals: [0, 0, 0, 0, 0, 0, 0, 0, 0], why: 'Already played in GW 5.', cta: 'Wildcard used' }
+};
+const ORDER = ['bb', 'tc', 'fh', 'wc'];
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { sel: 'bb' }; }
+  renderVals() {
+    const selId = (this.state && this.state.sel) || 'bb';
+    const S = CHIPS[selId];
+    const max = Math.max(...S.vals, 1);
+    const chips = ORDER.map((id) => {
+      const c = CHIPS[id];
+      const on = id === selId, used = id === 'wc';
+      const top = Math.max(...c.vals);
+      return {
+        name: c.name, pressed: on ? 'true' : 'false',
+        status: used ? 'USED · GW 5' : 'AVAILABLE',
+        best: used ? 'Played GW 5' : 'Best: GW ' + c.best,
+        gain: used ? '—' : '+' + top.toFixed(1) + ' pts',
+        bg: on ? '#0b1410' : '#ffffff', fg: on ? '#eef5ef' : (used ? '#4f5f56' : '#0b1410'),
+        muted: on ? '#a3b6aa' : '#4f5f56', line: on ? '#0b1410' : '#d6ded5',
+        gainC: on ? '#b7f34a' : (used ? '#4f5f56' : '#11704a'),
+        pick: () => this.setState({ sel: id })
+      };
+    });
+    const bars = S.vals.map((v, i) => {
+      const gw = 11 + i, best = gw === S.best;
+      return {
+        gw: gw, v: v ? v.toFixed(0) : '–',
+        h: Math.max((v / max) * 100, 2) + '%',
+        c: best ? '#11704a' : '#e2e8e1', lc: best ? '#11704a' : '#4f5f56',
+        gwC: best ? '#0b1410' : '#4f5f56', gwW: best ? 700 : 500
+      };
+    });
+    return {
+      chips, bars,
+      sel: {
+        name: S.name.toUpperCase(),
+        headline: S.best ? 'Best in GW ' + S.best + ' · +' + max.toFixed(1) + ' pts' : 'Used',
+        why: S.why, cta: S.cta,
+        aria: S.name + ' expected gain, GW 11 to 19: ' + S.vals.map((v, i) => 'GW ' + (11 + i) + ' ' + v).join(', ')
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>
