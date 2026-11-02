@@ -40,10 +40,10 @@ test("server-renders the app shell on every screen", async () => {
 
 test("each route server-renders its own screen", async () => {
   const screens = [
-    ["/", /MODEL SIGNAL/],
-    ["/squad", /Your editable squad/],
-    ["/players", /players modelled/],
-    ["/chips", /Chip strategy and squad route/],
+    ["/", /The model suggests/i],
+    ["/squad", /Rules-aware build/i],
+    ["/players", /sorted by xP/],
+    ["/chips", /Apply plan and rebuild the squad/],
     ["/leagues", /Link your real FPL team/],
   ];
 
@@ -69,14 +69,15 @@ test("keeps the squad, projection and chip behaviour after the route split", asy
   assert.match(state, /promoteBenchPlayer/);
   assert.match(state, /swapLineupPlayer/);
   assert.match(state, /squadStrategyForGameweek/);
-  assert.match(squad, /Your editable squad/);
-  assert.match(squad, /Live validation/);
+  assert.match(squad, /Rules-aware build/);
+  assert.match(squad, /replacementError/);
+  assert.match(squad, /Optimise XI and captain/);
 
   // The model's evidence is still shown, labelled with which model produced it.
-  assert.match(players, /WHY THIS FORECAST/);
-  assert.match(players, /Experimental trained xMins/);
-  assert.match(players, /Expected-minutes baseline/);
-  assert.match(chips, /Apply plan and rebuild GW1 squad/);
+  assert.match(players, /Why this forecast/);
+  assert.match(players, /Where the points come from/);
+  assert.match(players, /Evidence/);
+  assert.match(chips, /Apply plan and rebuild the squad/);
 
   assert.match(route, /dataQuality/);
   assert.match(route, /provenance/);
@@ -87,6 +88,10 @@ test("keeps the squad, projection and chip behaviour after the route split", asy
 
 test("ships the design tokens and the mobile-first floors", async () => {
   const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+
+  // The pre-redesign stylesheet is gone: every screen is built from the tokens.
+  assert.doesNotMatch(css, /Pre-redesign stylesheet/);
+  assert.doesNotMatch(css, /font-size: [0-9]px/);
 
   // Generated from docs/design/redesign/tokens.json.
   assert.match(css, /NINETY\+ design tokens/);

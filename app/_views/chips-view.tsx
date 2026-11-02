@@ -1,86 +1,183 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useState } from "react";
+import type { ChipPlanItem } from "../../lib/chip-strategy";
+import { Button, Card, CardHead, Chip, SegmentedControl } from "../_components/ui";
 import { useAppState } from "../_state/app-state";
+
+/** The gameweeks a chip in this half can legally be played in. */
+function gameweekOptions(item: ChipPlanItem) {
+  const first = item.half === 1 ? 1 : 20;
+  return Array.from({ length: 19 }, (_, index) => first + index).filter(
+    (gameweek) => !(gameweek === 1 && (item.chip === "Wildcard" || item.chip === "Free Hit")),
+  );
+}
 
 /** The chip planner. A manager's locked choices are constraints, not suggestions. */
 export function ChipsView() {
   const {
-    applyChipStrategy,
-    builderStarters,
     chipPlan,
     chipPlanValidation,
     gw1Strategy,
     projectedGw1,
     strategyMessage,
-    template,
-    templateEdge,
     updateChipChoice,
+    applyChipStrategy,
+    nextEvent,
   } = useAppState();
-  const router = useRouter();
+
+  const [half, setHalf] = useState<"1" | "2">("1");
+  const [selectedId, setSelectedId] = useState<ChipPlanItem["id"]>("BB1");
+
+  const shown = chipPlan
+    .filter((item) => String(item.half) === half)
+    .sort((a, b) => a.gameweek - b.gameweek);
+  const selected = chipPlan.find((item) => item.id === selectedId) ?? shown[0];
 
   return (
-      <div className="content strategy-grid">
-        <article className="panel strategy-main">
-          <div className="panel-head"><div><span className="eyebrow">MANAGER-CONTROLLED SEASON PLAN</span><h2>Chip strategy and squad route</h2></div><span className={chipPlanValidation.valid ? "valid-pill" : "invalid-pill"}>{chipPlanValidation.valid ? "✓ FPL rules valid" : chipPlanValidation.issues[0]}</span></div>
-          <div className="strategy-hero">
-            <span>GW1 SQUAD OBJECTIVE</span>
-            <h3>{gw1Strategy === "bench-boost" ? "Maximise all 15 players" : gw1Strategy === "triple-captain" ? "Maximise premium captain ceiling" : "Maximise the starting XI"}</h3>
-            <p>{gw1Strategy === "bench-boost" ? "GW1 bench projections receive full value while the starting squad is also assessed across GW2–3. The AI brings the first Wildcard route forward to protect your medium-term structure." : gw1Strategy === "triple-captain" ? "The captain receives an additional projection multiplier while the bench remains valued mainly for cover." : "The default draft prioritises the best legal XI and captain while retaining lower-weight bench cover."}</p>
-            <div><b>Current GW1 projection</b><strong>{projectedGw1.toFixed(1)} pts</strong></div>
-          </div>
-          <div className="strategy-message">{strategyMessage}</div>
-          {[1, 2].map((half) => (
-            <section className="chip-half" key={half}>
-              <div className="chip-half-head"><div><span className="eyebrow">CHIP SET {half}</span><h3>{half === 1 ? "GW1–19" : "GW20–38"}</h3></div><small>Use all four before this set expires</small></div>
-              <div className="chip-options">
-                {chipPlan.filter((item) => item.half === half).map((item) => (
-                  <div className={item.locked ? "chip-option active" : "chip-option"} key={item.id}>
-                    <span>{item.chip === "Triple Captain" ? "×3" : item.chip.slice(0, 2).toUpperCase()}</span>
-                    <div><b>{item.chip}</b><small>{item.rationale}</small></div>
-                    <label>
-                      <span className="sr-only">Choose gameweek for {item.chip}</span>
-                      <select value={item.locked ? String(item.gameweek) : "AI"} onChange={(event) => updateChipChoice(item.id, event.target.value)}>
-                        <option value="AI">AI · GW{item.gameweek}</option>
-                        {Array.from({ length: item.half === 1 ? 19 : 19 }, (_, index) => (item.half === 1 ? 1 : 20) + index)
-                          .filter((gameweek) => !(gameweek === 1 && (item.chip === "Wildcard" || item.chip === "Free Hit")))
-                          .map((gameweek) => <option value={gameweek} key={gameweek}>Lock GW{gameweek}</option>)}
-                      </select>
-                    </label>
-                    <strong>{item.locked ? "YOU" : "AI"}</strong>
-                  </div>
-                ))}
-              </div>
-            </section>
+    <div className="flex flex-col gap-3 pb-24 medium:gap-4 expanded:pb-0">
+      <SegmentedControl
+        className="medium:w-[280px]"
+        label="Chip set"
+        value={half}
+        onChange={(next) => {
+          setHalf(next);
+          const first = chipPlan.find((item) => String(item.half) === next);
+          if (first) setSelectedId(first.id);
+        }}
+        options={[
+          { value: "1", label: "GW 1–19" },
+          { value: "2", label: "GW 20–38" },
+        ]}
+      />
+
+      <section aria-label="Your chips" className="grid grid-cols-2 gap-3">
+        {shown.map((item) => {
+          const active = item.id === selected?.id;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              aria-pressed={active}
+              onClick={() => setSelectedId(item.id)}
+              className={`np-press flex min-h-[var(--row-min)] flex-col gap-1 rounded-md border p-3 text-left ${
+                active
+                  ? "border-transparent bg-ink text-on-ink"
+                  : "border-border bg-surface text-text"
+              }`}
+            >
+              <span
+                className={`t-eyebrow ${active ? "text-on-ink-muted" : "text-text-muted"}`}
+              >
+                {item.locked ? "Yours" : "Model"}
+              </span>
+              <span className="t-headline">{item.chip}</span>
+              <span className={`t-data ${active ? "text-accent" : "text-positive"}`}>
+                GW {item.gameweek}
+              </span>
+            </button>
+          );
+        })}
+      </section>
+
+      {selected && (
+        <Card className="flex flex-col gap-3">
+          <CardHead
+            eyebrow={`${selected.chip} · planned`}
+            title={`GW ${selected.gameweek}`}
+            aside={
+              <Chip tone={selected.locked ? "ink" : "neutral"}>
+                {selected.locked ? "Locked by you" : "Model's choice"}
+              </Chip>
+            }
+          />
+          <p className="t-body m-0 text-text-muted">{selected.rationale}</p>
+          <label className="flex flex-col gap-1">
+            <span className="t-label text-text-muted">Play this chip in</span>
+            <select
+              value={selected.locked ? String(selected.gameweek) : "AI"}
+              onChange={(event) => updateChipChoice(selected.id, event.target.value)}
+              className="t-input min-h-[var(--control-md)] rounded-sm border border-border-strong bg-surface px-3 text-text"
+            >
+              <option value="AI">Let the model choose · GW {selected.gameweek}</option>
+              {gameweekOptions(selected).map((gameweek) => (
+                <option key={gameweek} value={gameweek}>
+                  Lock to GW {gameweek}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="t-body-sm m-0 text-text-muted">{strategyMessage}</p>
+        </Card>
+      )}
+
+      <Card className="flex flex-col gap-2">
+        <CardHead
+          eyebrow={`GW ${nextEvent} squad objective`}
+          title={
+            gw1Strategy === "bench-boost"
+              ? "Maximise all fifteen"
+              : gw1Strategy === "triple-captain"
+                ? "Maximise the captain's ceiling"
+                : "Maximise the starting eleven"
+          }
+          aside={
+            <Chip tone={chipPlanValidation.valid ? "positive" : "negative"}>
+              {chipPlanValidation.valid ? "Rules valid" : chipPlanValidation.issues[0]}
+            </Chip>
+          }
+        />
+        <p className="t-body m-0 text-text-muted">
+          {gw1Strategy === "bench-boost"
+            ? "Bench projections count in full, and the squad is judged across the next three gameweeks as well."
+            : gw1Strategy === "triple-captain"
+              ? "The captain carries an extra multiplier, and the bench is valued only as cover."
+              : "The draft prioritises the best legal eleven and captain, with lower-weight bench cover."}{" "}
+          Current projection {projectedGw1.toFixed(1)} pts.
+        </p>
+      </Card>
+
+      <Card className="flex flex-col gap-2">
+        <CardHead eyebrow="Regret-aware planning" title="What your locks do" />
+        <p className="t-body m-0 text-text-muted">
+          A locked chip is treated as a constraint, not ignored. The rest of the plan is rebuilt
+          around it, and the squad objective for that gameweek changes with it.
+        </p>
+        <div className="flex flex-col">
+          {[
+            ["Locked by you", `${chipPlan.filter((item) => item.locked).length} of 8`],
+            ["Still flexible", `${chipPlan.filter((item) => !item.locked).length} chips`],
+            ["First Wildcard", `GW ${chipPlan.find((item) => item.id === "WC1")?.gameweek ?? "—"}`],
+          ].map(([label, value]) => (
+            <div
+              key={label}
+              className="flex items-center justify-between gap-3 border-t border-border py-2"
+            >
+              <span className="t-body text-text-muted">{label}</span>
+              <span className="t-data-lg">{value}</span>
+            </div>
           ))}
-          <button className="primary-button strategy-apply" disabled={!chipPlanValidation.valid} onClick={applyChipStrategy}>Apply plan and rebuild GW1 squad <span>↗</span></button>
-        </article>
-        <aside className="builder-side">
-          <article className="panel">
-            <span className="eyebrow">CONNECTED DECISIONS</span><h2>What changes with your plan</h2>
-            <div className="explain-stat"><span>GW1 optimisation</span><b>{gw1Strategy === "bench-boost" ? "All 15" : gw1Strategy === "triple-captain" ? "Captain ceiling" : "Best XI"}</b></div>
-            <div className="explain-stat"><span>First Wildcard</span><b>GW{chipPlan.find((item) => item.id === "WC1")?.gameweek}</b></div>
-            <div className="explain-stat"><span>Manager-locked chips</span><b>{chipPlan.filter((item) => item.locked).length} / 8</b></div>
-            <button className="secondary-button wide" onClick={() => router.push("/squad")}>Review current squad</button>
-          </article>
-          <article className="panel">
-            <span className="eyebrow">UNIQUE EDGE</span><h2>Regret-aware planning</h2>
-            <p className="body-copy">Locked choices are treated as constraints, not ignored. Unlocked chips remain flexible and will be re-evaluated when fixture, availability and blank/double-gameweek forecasts improve.</p>
-            <div className="explain-stat"><span>Plan status</span><b className="positive">{chipPlanValidation.valid ? "Rules valid" : "Needs attention"}</b></div><div className="explain-stat"><span>Future flexibility</span><b>{8 - chipPlan.filter((item) => item.locked).length} chips</b></div>
-          </article>
-          <article className="panel">
-            <span className="eyebrow">TEMPLATE DIVERGENCE</span><h2>How different are you?</h2>
-            {template ? (
-              <>
-                <p className="body-copy">The template XI is the highest-owned legal eleven in the game right now, captained by the most-owned outfield asset.</p>
-                <div className="explain-stat"><span>Template projection</span><b>{template.points.toFixed(1)} pts</b></div>
-                <div className="explain-stat"><span>Template captain</span><b>{template.captain.name}</b></div>
-                <div className="explain-stat"><span>Your edge</span><b className={templateEdge !== null && templateEdge >= 0 ? "positive" : "negative"}>{templateEdge !== null ? `${templateEdge >= 0 ? "+" : ""}${templateEdge.toFixed(1)} pts` : "—"}</b></div>
-                <div className="explain-stat"><span>Shared starters</span><b>{builderStarters.filter((player) => template.starters.some((asset) => asset.id === player.id)).length} / 11</b></div>
-              </>
-            ) : <p className="body-copy">Template comparison becomes available once the live player market has loaded.</p>}
-          </article>
-        </aside>
+        </div>
+        {/*
+          TODO: the design shows expected gain per gameweek for each chip. That
+          needs a chip-value model — bench projections and fixture counts per
+          future gameweek — which does not exist yet, so the plan shows the
+          gameweek it has chosen and why rather than a chart of invented bars.
+        */}
+      </Card>
+
+      <div className="fixed inset-x-0 bottom-[calc(var(--tab-bar)+env(safe-area-inset-bottom))] z-[var(--z-tabbar)] border-t border-border bg-header-glass p-3 backdrop-blur-md expanded:static expanded:border-0 expanded:bg-transparent expanded:p-0">
+        <div className="mx-auto w-full max-w-[var(--content-max)]">
+          <Button
+            variant="primary"
+            block
+            disabled={!chipPlanValidation.valid}
+            onClick={applyChipStrategy}
+          >
+            Apply plan and rebuild the squad
+          </Button>
+        </div>
       </div>
+    </div>
   );
 }

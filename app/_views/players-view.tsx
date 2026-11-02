@@ -1,138 +1,361 @@
 "use client";
 
-import { Fragment } from "react";
-import { BREAKDOWN_LABELS, useAppState } from "../_state/app-state";
+import Link from "next/link";
+import { replacementError } from "../../lib/squad-builder";
+import {
+  BottomSheet,
+  Button,
+  Card,
+  Chip,
+  EmptyState,
+  FdrChip,
+  Icon,
+  PlayerRow,
+  SegmentedControl,
+  SkeletonRows,
+} from "../_components/ui";
+import { BREAKDOWN_LABELS, useAppState, type Player } from "../_state/app-state";
+
+const POSITIONS = ["ALL", "GK", "DEF", "MID", "FWD"] as const;
+
+/** The evidence behind one projection, on demand rather than in the row. */
+function PlayerSheet({
+  player,
+  onClose,
+}: {
+  player: Player | null;
+  onClose: () => void;
+}) {
+  const {
+    builderSquad,
+    selectedSlot,
+    budget,
+    chooseReplacement,
+    updatedAt,
+    pointsModelVersion,
+    expectedMinutesVersion,
+  } = useAppState();
+  if (!player) return null;
+
+  const minutes = player.expectedMinutes;
+  const breakdown = player.pointsBreakdown;
+  const distribution = player.pointsDistribution;
+  const swapError = selectedSlot
+    ? replacementError(
+        builderSquad,
+        selectedSlot.id,
+        {
+          id: player.id,
+          name: player.name,
+          team: player.team,
+          position: player.position,
+          price: player.price,
+          xp1: player.xp1,
+          xp3: player.xp3,
+        },
+        budget,
+      )
+    : null;
+
+  return (
+    <BottomSheet
+      open
+      onClose={onClose}
+      label={`${player.name}, why this forecast`}
+      header={
+        <>
+          <span className="t-eyebrow text-text-muted">Why this forecast</span>
+          <span className="t-title-2">{player.name}</span>
+          <span className="t-body-sm text-text-muted">
+            {player.team} · {player.position} · £{player.price.toFixed(1)}m ·{" "}
+            {player.ownership.toFixed(1)}% owned
+          </span>
+        </>
+      }
+      footer={
+        selectedSlot ? (
+          <Button
+            variant="primary"
+            block
+            disabled={Boolean(swapError)}
+            onClick={() => {
+              chooseReplacement({
+                id: player.id,
+                name: player.name,
+                team: player.team,
+                position: player.position,
+                price: player.price,
+                xp1: player.xp1,
+                xp3: player.xp3,
+              });
+              onClose();
+            }}
+          >
+            {swapError ?? `Replace ${selectedSlot.name}`}
+          </Button>
+        ) : undefined
+      }
+    >
+      {minutes ? (
+        <>
+          <div className="grid grid-cols-2 gap-2 medium:grid-cols-3">
+            {[
+              ["Starts", `${minutes.startProbability}%`],
+              ["Off the bench", `${minutes.substituteProbability}%`],
+              ["No minutes", `${minutes.zeroMinutesProbability}%`],
+              ["Reaches 60", `${minutes.sixtyMinuteProbability}%`],
+              ["Expected minutes", String(minutes.expectedMinutes)],
+              ...(player.cleanSheetProbability !== undefined
+                ? [["Clean sheet", `${Math.round(player.cleanSheetProbability * 100)}%`]]
+                : []),
+              ...(distribution
+                ? [
+                    [
+                      "Floor · median · ceiling",
+                      `${distribution.p10Points.toFixed(0)} · ${distribution.medianPoints.toFixed(0)} · ${distribution.p90Points.toFixed(0)}`,
+                    ],
+                    [
+                      "5+ / 10+ points",
+                      `${Math.round(distribution.fivePlusProbability * 100)}% / ${Math.round(distribution.tenPlusProbability * 100)}%`,
+                    ],
+                  ]
+                : []),
+            ].map(([label, value]) => (
+              <div key={label} className="flex flex-col gap-0.5 rounded-sm bg-surface-2 p-3">
+                <span className="t-caption text-text-muted">{label}</span>
+                <span className="t-data-lg">{value}</span>
+              </div>
+            ))}
+          </div>
+
+          {breakdown && (
+            <div className="flex flex-col gap-2">
+              <span className="t-eyebrow text-text-muted">Where the points come from</span>
+              <div className="flex flex-col">
+                {BREAKDOWN_LABELS.filter(([key]) => Math.abs(breakdown[key]) >= 0.01).map(
+                  ([key, label]) => (
+                    <div
+                      key={key}
+                      className="flex items-center justify-between gap-3 border-b border-border py-1.5"
+                    >
+                      <span className="t-body">{label}</span>
+                      <span
+                        className={breakdown[key] < 0 ? "t-data text-negative" : "t-data"}
+                      >
+                        {breakdown[key] > 0 ? "+" : ""}
+                        {breakdown[key].toFixed(2)}
+                      </span>
+                    </div>
+                  ),
+                )}
+                <div className="flex items-center justify-between gap-3 py-1.5">
+                  <span className="t-headline">Projected</span>
+                  <span className="t-data-lg text-positive">{breakdown.total.toFixed(2)}</span>
+                </div>
+              </div>
+              {player.rates && (
+                <p className="t-body-sm m-0 text-text-muted">
+                  Built from {player.rates.expectedGoals.toFixed(2)} xG and{" "}
+                  {player.rates.expectedAssists.toFixed(2)} xA per 90
+                  {player.rates.defensiveActions > 0
+                    ? `, ${player.rates.defensiveActions.toFixed(1)} defensive actions per 90`
+                    : ""}{" "}
+                  · {Math.round(player.rates.observationWeight * 100)}% observed,{" "}
+                  {Math.round((1 - player.rates.observationWeight) * 100)}% position prior.
+                </p>
+              )}
+            </div>
+          )}
+
+          <div className="flex flex-col gap-1">
+            <span className="t-eyebrow text-text-muted">Evidence</span>
+            {(distribution?.reasons ?? minutes.reasons).map((reason) => (
+              <p key={reason} className="t-body m-0 flex gap-2 text-text-muted">
+                <Icon name="check" size={16} className="mt-0.5 flex-none text-positive" />
+                {reason}
+              </p>
+            ))}
+          </div>
+
+          <p className="t-caption m-0 text-text-muted">
+            {pointsModelVersion
+              ? "Monte Carlo points model · 2026/27 rules"
+              : `Expected minutes: ${expectedMinutesVersion}`}
+            {player.fixtures?.length ? ` · next: ${player.fixtures.join(" · ")}` : ""}
+            {updatedAt ? ` · retrieved ${new Date(updatedAt).toLocaleString()}` : ""}
+          </p>
+        </>
+      ) : (
+        <p className="t-body m-0 text-text-muted">
+          Live expected-minutes evidence is unavailable for this player, so the row is using the
+          clearly labelled preview fallback.
+        </p>
+      )}
+    </BottomSheet>
+  );
+}
 
 /** The player lab: the ranking, and the evidence behind each projection. */
 export function PlayersView() {
   const {
-    backtest,
-    eventModelVersion,
-    expectedMinutesVersion,
-    feedStatus,
-    live,
-    modelVersion,
-    pointsModelVersion,
-    position,
-    query,
-    range,
-    selectedPlayerId,
-    setPosition,
-    setQuery,
-    setRange,
-    setSelectedPlayerId,
-    setVisibleCount,
     shownPlayers,
-    simulationCount,
-    teamLineupAdjustedCount,
-    teamModelVersion,
-    teamOpportunityAdjustedCount,
-    updatedAt,
+    players,
+    query,
+    setQuery,
+    position,
+    setPosition,
+    range,
+    setRange,
     visibleCount,
+    setVisibleCount,
+    selectedPlayerId,
+    setSelectedPlayerId,
+    selectedSlot,
+    setSelectedSlotId,
+    teamOutlook,
+    feedStatus,
+    pointsModelVersion,
+    builderSquad,
   } = useAppState();
 
+  const difficultyByTeam = new Map(
+    teamOutlook.map((team) => [team.team, team.fixtures[0]?.difficulty ?? 3]),
+  );
+  const owned = new Set(builderSquad.map((asset) => asset.id));
+  const selected = players.find((player) => player.id === selectedPlayerId) ?? null;
+
   return (
-      <div className="content">
-        <div className="lab-toolbar">
-          <label className="search"><span>⌕</span><input value={query} onChange={(e) => { setQuery(e.target.value); setVisibleCount(40); }} placeholder="Search player" /></label>
-          <div className="segmented">
-            {(["ALL", "GK", "DEF", "MID", "FWD"] as const).map((item) => <button key={item} className={position === item ? "selected" : ""} onClick={() => { setPosition(item); setVisibleCount(40); }}>{item}</button>)}
-          </div>
-          <div className="segmented"><button className={range === 1 ? "selected" : ""} onClick={() => { setRange(1); setVisibleCount(40); }}>1 GW</button><button className={range === 3 ? "selected" : ""} onClick={() => { setRange(3); setVisibleCount(40); }}>3 GW</button></div>
-        </div>
-        <article className="panel player-table-wrap">
-          <div className="table-summary">
-            <div><span className="eyebrow">{pointsModelVersion ? "PROBABILISTIC POINTS RANKING" : "BASELINE POINTS RANKING"} · {modelVersion.toUpperCase()}</span><h2>{shownPlayers.length} players modelled <em className="baseline-pill">{pointsModelVersion ? `${simulationCount?.toLocaleString() ?? ""} Monte Carlo paths` : expectedMinutesVersion === "expected-minutes-team-lineup-v1" ? "Correlated team-lineup xMins" : expectedMinutesVersion === "expected-minutes-team-opportunity-v1" ? "Team-opportunity xMins" : expectedMinutesVersion.includes("-v2-") ? "Experimental trained xMins" : "Expected-minutes baseline"}</em></h2></div>
-            <div className="data-health"><span><i className={live ? "health-good" : "health-warn"} /> {feedStatus === "loading" ? "Connecting official feed…" : live ? "Official feed connected" : "Preview fallback active"}</span><span>{expectedMinutesVersion === "expected-minutes-team-lineup-v1" ? `${teamLineupAdjustedCount} players lineup-constrained${teamOpportunityAdjustedCount ? ` · ${teamOpportunityAdjustedCount} injury boosts` : ""}` : expectedMinutesVersion === "expected-minutes-team-opportunity-v1" ? `${teamOpportunityAdjustedCount} injury-opportunity adjustments` : expectedMinutesVersion.includes("-v2-") ? "Expected-minutes v2" : "Expected-minutes v1"}</span><span>{teamModelVersion ? "Poisson team model" : "FPL fixture baseline"}</span>{pointsModelVersion && <span>2026/27 rules · bonus + DC</span>}{eventModelVersion && <span>Trained player-event priors</span>}{backtest && <span title={`${backtest.foldCount} expanding-window folds · ${backtest.sampleCount} locked forecasts`}>Backtest MAE {backtest.modelMinutesMae.toFixed(1)} vs {backtest.baselineMinutesMae.toFixed(1)} baseline</span>}</div>
-          </div>
-          <div className="player-table">
-            <div className="player-row table-head"><span>Rank / player</span><span>Fixture</span><span>Price</span><span>{range} GW xPts</span><span>Form</span><span>xMins</span><span>Own.</span><span>Confidence</span></div>
-            {feedStatus === "loading" && Array.from({ length: 8 }, (_, index) => (
-              <div className="skeleton-row" key={`skeleton-${index}`} aria-hidden="true">
-                <span className="skeleton" style={{ width: 22 }} />
-                <span className="skeleton" style={{ width: 150 }} />
-                <span className="skeleton" style={{ width: 60 }} />
-                <span className="skeleton" style={{ width: 44 }} />
-                <span className="skeleton" style={{ width: 52 }} />
-                <span className="skeleton" style={{ width: 40 }} />
-                <span className="skeleton" style={{ width: 46 }} />
-              </div>
-            ))}
-            {feedStatus !== "loading" && shownPlayers.slice(0, visibleCount).map((player, index) => (
-              <Fragment key={player.id}>
-                <button className="player-row" title={player.fixtures?.length ? `Next fixtures: ${player.fixtures.join(" · ")}` : undefined} onClick={() => setSelectedPlayerId((current) => current === player.id ? null : player.id)} aria-expanded={selectedPlayerId === player.id}>
-                  <span className="player-identity"><i>{index + 1}</i><b>{player.name}<small>{player.team} · {player.position}</small></b>{player.tag && <em>{player.tag}</em>}</span>
-                  <span className="fixture-cell"><b>{player.opponent}</b><small>{player.venue}</small></span>
-                  <span>£{player.price.toFixed(1)}</span>
-                  <span className="xp-cell">{(range === 1 ? player.xp1 : player.xp3).toFixed(1)}</span>
-                  <span>{player.form.toFixed(1)}</span>
-                  <span>{(player.expectedMinutes?.expectedMinutes ?? player.minutes).toFixed(1)}</span>
-                  <span>{player.ownership.toFixed(1)}%</span>
-                  <span className="confidence-cell"><i style={{ width: `${player.confidence ?? 58}%` }} /><b>{player.confidence ?? 58}%</b></span>
-                </button>
-                {selectedPlayerId === player.id && (
-                  <div className="player-explanation">
-                    <div className="explanation-title"><div><span className="eyebrow">WHY THIS FORECAST?</span><h3>{player.name} · minutes, events and uncertainty</h3></div><span className="model-label">{player.pointsDistribution ? "Monte Carlo v1 · 2026/27 rules" : player.expectedMinutes?.modelVersion === "expected-minutes-team-lineup-v1" ? "Correlated team-lineup minutes v1" : player.expectedMinutes?.modelVersion === "expected-minutes-team-opportunity-v1" ? "Team-opportunity minutes v1" : player.expectedMinutes?.modelVersion === "expected-minutes-v2-linear-1" ? "Expected-minutes v2 · experimental" : "Expected-minutes baseline v1"}</span></div>
-                    {player.expectedMinutes ? (
-                      <>
-                        <div className="probability-grid">
-                          <div><span>Start</span><b>{player.expectedMinutes.startProbability}%</b></div>
-                          <div><span>Sub appearance</span><b>{player.expectedMinutes.substituteProbability}%</b></div>
-                          <div><span>Zero minutes</span><b>{player.expectedMinutes.zeroMinutesProbability}%</b></div>
-                          <div><span>Reach 60</span><b>{player.expectedMinutes.sixtyMinuteProbability}%</b></div>
-                          <div><span>Expected minutes</span><b>{player.expectedMinutes.expectedMinutes}</b></div>
-                          {player.teamExpectedGoals !== undefined && <div><span>Team expected goals</span><b>{player.teamExpectedGoals.toFixed(2)}</b></div>}
-                          {player.cleanSheetProbability !== undefined && <div><span>Clean-sheet chance</span><b>{Math.round(player.cleanSheetProbability * 100)}%</b></div>}
-                          {player.pointsDistribution && <><div><span>Floor · median · ceiling</span><b>{player.pointsDistribution.p10Points.toFixed(0)} · {player.pointsDistribution.medianPoints.toFixed(0)} · {player.pointsDistribution.p90Points.toFixed(0)}</b></div><div><span>5+ / 10+ points</span><b>{Math.round(player.pointsDistribution.fivePlusProbability * 100)}% / {Math.round(player.pointsDistribution.tenPlusProbability * 100)}%</b></div><div><span>Goal / assist</span><b>{Math.round(player.pointsDistribution.goalProbability * 100)}% / {Math.round(player.pointsDistribution.assistProbability * 100)}%</b></div><div><span>Bonus potential</span><b>{Math.round(player.pointsDistribution.bonusProbability * 100)}%</b></div><div><span>Defensive contribution</span><b>{Math.round(player.pointsDistribution.defensiveContributionProbability * 100)}%</b></div></>}
-                        </div>
-                        {player.pointsBreakdown && (
-                          <div className="breakdown-block">
-                            <span className="eyebrow">WHERE THE POINTS COME FROM</span>
-                            <div className="breakdown-bar">
-                              {BREAKDOWN_LABELS.filter(([key]) => player.pointsBreakdown![key] > 0).map(([key, label]) => (
-                                <i
-                                  key={key}
-                                  className={`seg-${key}`}
-                                  style={{ width: `${(player.pointsBreakdown![key] / Math.max(0.01, player.pointsBreakdown!.total)) * 100}%` }}
-                                  title={`${label}: ${player.pointsBreakdown![key].toFixed(2)} pts`}
-                                />
-                              ))}
-                            </div>
-                            <div className="breakdown-list">
-                              {BREAKDOWN_LABELS.filter(([key]) => Math.abs(player.pointsBreakdown![key]) >= 0.01).map(([key, label]) => (
-                                <div key={key}>
-                                  <span>{label}</span>
-                                  <b className={player.pointsBreakdown![key] < 0 ? "negative" : undefined}>
-                                    {player.pointsBreakdown![key] > 0 ? "+" : ""}{player.pointsBreakdown![key].toFixed(2)}
-                                  </b>
-                                </div>
-                              ))}
-                              <div className="breakdown-total"><span>Projected</span><b>{player.pointsBreakdown.total.toFixed(2)}</b></div>
-                            </div>
-                            {player.rates && (
-                              <p className="model-note">
-                                Built from {player.rates.expectedGoals.toFixed(2)} xG and {player.rates.expectedAssists.toFixed(2)} xA per 90
-                                {player.rates.defensiveActions > 0 ? `, ${player.rates.defensiveActions.toFixed(1)} defensive actions per 90` : ""}
-                                {" · "}{Math.round(player.rates.observationWeight * 100)}% observed, {Math.round((1 - player.rates.observationWeight) * 100)}% position prior
-                              </p>
-                            )}
-                          </div>
-                        )}
-                        <div className="evidence-grid">
-                          <div><span className="eyebrow">STRUCTURED EVIDENCE</span>{(player.pointsDistribution?.reasons ?? player.expectedMinutes.reasons).map((reason) => <p key={reason}>✓ {reason}</p>)}</div>
-                          <div><span className="eyebrow">NEXT FIXTURES</span><p>{player.fixtures?.join(" · ") || "Fixture data pending"}</p><p>Minutes confidence: {player.expectedMinutes.confidence}%</p></div>
-                          <div><span className="eyebrow">PROVENANCE</span><p>Official FPL public data</p><p>{updatedAt ? `Retrieved ${new Date(updatedAt).toLocaleString()}` : "Preview evidence only"}</p></div>
-                        </div>
-                      </>
-                    ) : <p className="fallback-note">Live expected-minutes evidence is unavailable. This row is using the clearly labelled preview fallback.</p>}
-                  </div>
-                )}
-              </Fragment>
-            ))}
-          </div>
-          {shownPlayers.length === 0 && <div className="empty-state"><b>No players match those filters</b><span>Clear the search or select another position.</span></div>}
-          {visibleCount < shownPlayers.length && <button className="load-more" onClick={() => setVisibleCount((count) => count + 40)}>Show 40 more <span>{shownPlayers.length - visibleCount} remaining</span></button>}
-        </article>
+    <div className="flex flex-col gap-3">
+      <label className="flex min-h-[var(--control-md)] items-center gap-2 rounded-sm border border-border-strong bg-surface px-3">
+        <Icon name="search" className="text-text-muted" />
+        <input
+          type="search"
+          value={query}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setVisibleCount(40);
+          }}
+          placeholder="Search players or clubs"
+          aria-label="Search players"
+          className="t-input w-full border-0 bg-transparent text-text outline-none placeholder:text-text-disabled"
+        />
+      </label>
+
+      <div className="flex flex-wrap gap-2">
+        {POSITIONS.map((item) => (
+          <button
+            key={item}
+            type="button"
+            aria-pressed={position === item}
+            onClick={() => {
+              setPosition(item);
+              setVisibleCount(40);
+            }}
+            className={`np-press t-label min-h-[var(--tap-min)] rounded-full border px-3 ${
+              position === item
+                ? "border-transparent bg-ink text-on-ink"
+                : "border-border-strong bg-surface text-text"
+            }`}
+          >
+            {item === "ALL" ? "All" : item}
+          </button>
+        ))}
       </div>
+
+      {selectedSlot && (
+        <div className="flex items-center gap-2 rounded-sm bg-warning-soft px-3 py-2">
+          <Icon name="alert" size={16} className="flex-none text-warning" />
+          <span className="t-body-sm flex-1">
+            Replacing <b>{selectedSlot.name}</b> · {selectedSlot.position} only
+          </span>
+          <button
+            type="button"
+            onClick={() => setSelectedSlotId(null)}
+            className="t-label np-press min-h-[var(--tap-min)] px-2 text-positive"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+
+      <div className="flex items-center justify-between gap-3">
+        <span className="t-body-sm text-text-muted">
+          {shownPlayers.length} players · sorted by xP
+        </span>
+        <SegmentedControl
+          className="w-[200px]"
+          label="Horizon"
+          value={String(range)}
+          onChange={(next) => {
+            setRange(Number(next) as 1 | 3);
+            setVisibleCount(40);
+          }}
+          options={[
+            { value: "1", label: "Next GW" },
+            { value: "3", label: "Next 3" },
+          ]}
+        />
+      </div>
+
+      <Card padded={false}>
+        {feedStatus === "loading" && <SkeletonRows rows={8} />}
+        {feedStatus !== "loading"
+          && shownPlayers.slice(0, visibleCount).map((player) => (
+            <PlayerRow
+              key={player.id}
+              onClick={() => setSelectedPlayerId(player.id)}
+              ariaLabel={`${player.name}, ${player.team}, ${player.position}, £${player.price.toFixed(1)}m, ${(range === 1 ? player.xp1 : player.xp3).toFixed(1)} expected points`}
+              lead={
+                <span className="t-caption grid h-9 w-9 place-items-center rounded-full bg-surface-2 font-mono">
+                  {player.team}
+                </span>
+              }
+              title={
+                <>
+                  {player.name}
+                  {owned.has(player.id) && <Chip tone="positive">Yours</Chip>}
+                  {player.tag && <Chip tone="neutral">{player.tag}</Chip>}
+                </>
+              }
+              meta={
+                <span className="flex items-center gap-1.5">
+                  {player.position} · £{player.price.toFixed(1)}m
+                  <FdrChip
+                    opponent={player.opponent}
+                    venue={player.venue}
+                    difficulty={difficultyByTeam.get(player.team) ?? 3}
+                  />
+                </span>
+              }
+              figure={(range === 1 ? player.xp1 : player.xp3).toFixed(1)}
+              figureNote="xP"
+            />
+          ))}
+        {feedStatus !== "loading" && !shownPlayers.length && (
+          <EmptyState icon="search" title="No players match those filters">
+            Clear the search or choose another position.
+          </EmptyState>
+        )}
+        {visibleCount < shownPlayers.length && (
+          <button
+            type="button"
+            onClick={() => setVisibleCount(visibleCount + 40)}
+            className="np-press t-label min-h-[var(--tap-min)] w-full border-t border-border bg-surface-2 text-positive"
+          >
+            Show 40 more · {shownPlayers.length - visibleCount} remaining
+          </button>
+        )}
+      </Card>
+
+      <p className="t-caption m-0 text-text-muted">
+        {pointsModelVersion ? "Probabilistic points model" : "Baseline model"} · tap a player for
+        the points breakdown and the evidence behind it.{" "}
+        <Link href="/squad" className="text-positive">
+          Back to your squad
+        </Link>
+      </p>
+
+      <PlayerSheet player={selected} onClose={() => setSelectedPlayerId(null)} />
+    </div>
   );
 }

@@ -1,156 +1,277 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useState } from "react";
+import Link from "next/link";
+import { firstName, ordinal } from "../_components/leagues/format";
+import { FixtureTicker } from "../_components/squad/fixture-ticker";
+import { flaggedPlayers, likelyRange } from "../_components/squad/projection";
+import {
+  Button,
+  Card,
+  CardHead,
+  Chip,
+  BottomSheet,
+  Icon,
+  LiveDot,
+  StatCard,
+} from "../_components/ui";
 import { useAppState } from "../_state/app-state";
+
+/** The league race, as a card you can act on rather than a table to read. */
+function LiveMonthCard() {
+  const { leagueInsights, currentMonth, manager, selectedLeagueId } = useAppState();
+  if (!manager) {
+    return (
+      <Card className="flex flex-col gap-3">
+        <CardHead eyebrow="Manager of the Month" title="Connect your team" />
+        <p className="t-body m-0 text-text-muted">
+          Link your FPL team to see your mini-league race, your real squad in the builder and the
+          monthly awards.
+        </p>
+        <Button variant="primary" href="/leagues">
+          Connect
+        </Button>
+      </Card>
+    );
+  }
+  if (!leagueInsights || !currentMonth) return null;
+
+  const rows = currentMonth.standings;
+  const you = rows.find((row) => row.entryId === manager.entryId);
+  const leader = rows[0];
+  const around = you
+    ? rows.slice(Math.max(0, rows.indexOf(you) - 1), Math.max(0, rows.indexOf(you) - 1) + 3)
+    : rows.slice(0, 3);
+
+  const headline = you
+    ? you.rank === 1
+      ? `Top of ${currentMonth.month.name}`
+      : `${ordinal(you.rank)}, ${leader.netPoints - you.netPoints} behind ${firstName(leader.managerName)}`
+    : `${firstName(leader?.managerName ?? "")} leads ${currentMonth.month.name}`;
+
+  return (
+    <Link
+      href="/leagues"
+      aria-label={`${currentMonth.month.name} race. ${headline}. Open the league.`}
+      className="np-press flex flex-col gap-3 rounded-lg bg-ink p-4 text-on-ink no-underline medium:p-5"
+    >
+      <span className="t-eyebrow flex items-center justify-between gap-2 text-on-ink-muted">
+        <span className="truncate">
+          Manager of the Month · {currentMonth.month.name}
+        </span>
+        {!currentMonth.month.complete && (
+          <span className="flex items-center gap-1.5 text-accent">
+            <LiveDot />
+            Live
+          </span>
+        )}
+      </span>
+      <span className="t-title-1 font-serif">{headline}</span>
+      <span className="flex flex-col">
+        {around.map((row) => {
+          const isYou = row.entryId === manager.entryId;
+          return (
+            <span
+              key={row.entryId}
+              className={`flex items-center gap-3 border-t border-white/10 py-1.5 ${isYou ? "text-accent" : ""}`}
+            >
+              <span className="t-data w-5">{row.rank}</span>
+              <span className="t-body flex-1 truncate">
+                {isYou ? "You" : row.managerName || row.teamName}
+              </span>
+              <span className="t-data-lg">{row.netPoints}</span>
+            </span>
+          );
+        })}
+      </span>
+      <span className="t-body-sm flex items-center justify-between gap-2 text-on-ink-muted">
+        <span className="truncate">{leagueInsights.league.name}</span>
+        <span className="flex items-center gap-1 text-accent">
+          Live table
+          <Icon name="chevronRight" size={16} />
+        </span>
+      </span>
+      {selectedLeagueId === null && <span className="sr-only">No league selected</span>}
+    </Link>
+  );
+}
 
 /** The decision room: what the model thinks, and the one move it would make next. */
 export function OverviewView() {
   const {
-    bankRemaining,
+    nextEvent,
     animatedGw1,
-    animatedGw3,
-    animatedSquadValue,
-    builderBench,
-    builderPitch,
+    projectedGw3,
+    squadCapture,
+    builderStarters,
+    builderSquad,
+    builderValidation,
+    bankRemaining,
+    captainId,
     captain,
     captainEdge,
-    captainId,
-    chipPlan,
-    nextEvent,
-    nextPlannedChip,
-    projectionLeaders,
-    selectBuilderSlot,
-    setRange,
-    squadCapture,
-    teamOutlook,
-    templateEdge,
+    players,
     transferSuggestion,
-    viceCaptainId,
+    teamOutlook,
+    nextPlannedChip,
+    live,
+    feedStatus,
   } = useAppState();
-  const router = useRouter();
+  const [whySheet, setWhySheet] = useState(false);
+
+  const range = likelyRange(builderStarters, players, captainId);
+  const flagged = flaggedPlayers(builderSquad, players);
 
   return (
-      <div className="content">
-        <section className="signal-strip">
-          <div><span className="live-dot" /> MODEL SIGNAL</div>
-          <p><b>Live squad state is synchronised.</b> Decision Room, Squad Builder and Player Lab now use the same projection output; optimise again whenever the feed changes.</p>
-          <button onClick={() => router.push("/squad")}>Review XI →</button>
-        </section>
+    <div className="flex flex-col gap-3 medium:gap-4">
+      <LiveMonthCard />
 
-        <div className="metric-grid">
-          <article className="metric hero-metric">
-            <span>PROJECTED GW{nextEvent}</span>
-            <div className="metric-value">{animatedGw1} <small>pts</small></div>
-            <div className="meter"><i style={{ width: `${squadCapture}%` }} /></div>
-            <footer><b>{squadCapture}% of squad</b><span>starting XI share</span></footer>
-          </article>
-          <article className="metric">
-            <span>3-GW OUTLOOK</span>
-            <div className="metric-value">{animatedGw3} <small>pts</small></div>
-            <footer className={templateEdge !== null && templateEdge >= 0 ? "positive" : undefined}>
-              {templateEdge === null
-                ? "Template comparison pending"
-                : `${templateEdge >= 0 ? "↑" : "↓"} ${Math.abs(templateEdge).toFixed(1)} vs template XI`}
-            </footer>
-          </article>
-          <article className="metric">
-            <span>SQUAD VALUE</span>
-            <div className="metric-value">£{animatedSquadValue}<span className="bank">+ £{bankRemaining.toFixed(1)} ITB</span></div>
-            <footer>15 / 15 · Rules valid</footer>
-          </article>
-          <article className="metric">
-            <span>CAPTAIN EDGE</span>
-            <div className="captain-row"><div className="mini-shirt">C</div><div><b>{captain?.name ?? "No captain"}</b><small>{captain?.xp1.toFixed(1) ?? "0.0"} GW1 xPts</small></div><em>+{captainEdge.toFixed(1)}</em></div>
-            <footer>vs next-best captain</footer>
-          </article>
-        </div>
+      <section className="flex flex-col gap-1 rounded-lg border border-border bg-surface p-4 shadow-[var(--shadow-sm)] medium:p-5">
+        <span className="t-eyebrow text-text-muted">GW {nextEvent} · your projection</span>
+        <span className="t-display">
+          {animatedGw1} <span className="t-title-2 align-baseline">pts</span>
+        </span>
+        <span className="t-body-sm text-text-muted">
+          {range ? `Likely range ${range.low}–${range.high} · ` : ""}
+          {squadCapture}% of your squad&apos;s points are in the XI
+        </span>
+      </section>
 
-        <div className="dashboard-grid">
-          <article className="panel squad-panel">
-            <div className="panel-head">
-              <div><span className="eyebrow">OPTIMAL XI</span><h2>Squad intelligence</h2></div>
-              <button className="text-button" onClick={() => router.push("/squad")}>Edit squad →</button>
+      <Card className="flex flex-col gap-2">
+        <span className="t-eyebrow flex items-center gap-1.5 text-text-muted">
+          <Icon name="arrowUpRight" size={16} />
+          The model suggests
+        </span>
+        {transferSuggestion ? (
+          <>
+            <p className="t-title-2 m-0">
+              {transferSuggestion.outgoing.name} → {transferSuggestion.incoming.name} adds{" "}
+              <span className="text-positive">+{transferSuggestion.gain.toFixed(1)} xP</span> over
+              three gameweeks.
+            </p>
+            <p className="t-body m-0 text-text-muted">
+              {transferSuggestion.incoming.name} costs £
+              {transferSuggestion.incoming.price.toFixed(1)}m against{" "}
+              {transferSuggestion.outgoing.name}&apos;s £
+              {transferSuggestion.outgoing.price.toFixed(1)}m, leaving £
+              {(bankRemaining + transferSuggestion.outgoing.price - transferSuggestion.incoming.price).toFixed(1)}m
+              in the bank.
+            </p>
+            <div className="mt-1 flex flex-col gap-2 medium:flex-row">
+              <Button variant="primary" href="/squad" className="medium:flex-1">
+                Make transfer
+              </Button>
+              <Button onClick={() => setWhySheet(true)} className="medium:flex-1">
+                Why?
+              </Button>
             </div>
-            <div className="pitch">
-              <div className="pitch-circle" />
-              {builderPitch.map((player) => (
-                <button className="pitch-player" key={player.id} style={{ left: `${player.x}%`, top: `${player.y}%` }} title={`${player.name} · ${player.xp1.toFixed(1)} GW1 xPts`} onClick={() => { router.push("/squad"); selectBuilderSlot(player.id); }}>
-                  <span className={`shirt ${player.position.toLowerCase()}`}>{captainId === player.id ? "C" : viceCaptainId === player.id ? "V" : player.team.slice(0, 1)}</span>
-                  <b>{player.name}</b><small>{player.xp1.toFixed(1)} GW1 xPts</small>
-                </button>
-              ))}
-            </div>
-            <div className="bench-row">
-              <span>BENCH</span>
-              {builderBench.map((player) => <div key={player.id}><i>{player.position}</i><b>{player.name}</b><small>{player.xp1.toFixed(1)} xPts</small></div>)}
-            </div>
-          </article>
+          </>
+        ) : (
+          <p className="t-body m-0 text-text-muted">
+            No legal transfer improves this squad&apos;s three-gameweek projection right now.
+          </p>
+        )}
+      </Card>
 
-          <div className="right-stack">
-            <article className="panel transfer-panel">
-              <div className="panel-head"><div><span className="eyebrow">NEXT BEST MOVE</span><h2>Transfer radar</h2></div><span className="confidence">Rules checked</span></div>
-              {transferSuggestion ? (
-                <>
-                  <div className="transfer-swap">
-                    <div><span className="player-orb out">{transferSuggestion.outgoing.team}</span><b>{transferSuggestion.outgoing.name}</b><small>£{transferSuggestion.outgoing.price.toFixed(1)}m · {transferSuggestion.outgoing.xp3.toFixed(1)} xPts</small></div>
-                    <span className="swap-arrow">→</span>
-                    <div><span className="player-orb in">{transferSuggestion.incoming.team}</span><b>{transferSuggestion.incoming.name}</b><small>£{transferSuggestion.incoming.price.toFixed(1)}m · {transferSuggestion.incoming.xp3.toFixed(1)} xPts</small></div>
-                  </div>
-                  <div className="transfer-gain"><span>3-GW expected gain</span><strong>+{transferSuggestion.gain.toFixed(1)} pts</strong></div>
-                  <p>This is the highest projected legal same-position replacement under the current budget and three-player club limit.</p>
-                </>
-              ) : <p>No legal positive-projection transfer is currently available.</p>}
-              <button className="secondary-button" onClick={() => router.push("/squad")}>Open squad builder</button>
-            </article>
-
-            <article className="panel market-panel">
-              <div className="panel-head"><div><span className="eyebrow">MODEL LEADERS</span><h2>GW1 projection leaders</h2></div><button className="text-button" onClick={() => { setRange(1); router.push("/players"); }}>Player Lab →</button></div>
-              {projectionLeaders.map((player) => (
-                <div className="market-row" key={player.id}>
-                  <span className="initial">{player.name.slice(0, 2).toUpperCase()}</span>
-                  <div><b>{player.name}</b><small>{player.team} · {player.position}</small></div>
-                  <div className="pressure"><i style={{ width: `${Math.min(100, (player.xp1 / Math.max(projectionLeaders[0]?.xp1 ?? 1, 1)) * 100)}%` }} /></div>
-                  <em>{player.xp1.toFixed(1)} xPts</em>
-                </div>
-              ))}
-            </article>
-          </div>
-        </div>
-
-        <div className="lower-grid">
-          <article className="panel">
-            <div className="panel-head"><div><span className="eyebrow">FIXTURE MODEL</span><h2>Three-week run</h2></div><span className="subtle">Expected goals</span></div>
-            {teamOutlook.slice(0, 5).map((row) => (
-              <div className="fixture-row" key={row.team}>
-                <b>{row.team}</b>
-                <span>{row.attackScore >= row.defenceScore + 15 ? "Attack" : row.defenceScore >= row.attackScore + 15 ? "Defence" : "Attack + defence"}</span>
-                <div className="fixtures">
-                  {row.fixtures.map((fixture, index) => (
-                    <i
-                      key={`${fixture.opponent}-${index}`}
-                      className={fixture.difficulty <= 2 ? "easy" : fixture.difficulty === 3 ? "medium" : "hard"}
-                      title={`${fixture.opponent} (${fixture.venue}) · ${fixture.expectedGoalsFor} xGF, ${fixture.expectedGoalsAgainst} xGA`}
-                    >
-                      {fixture.opponent}{fixture.venue === "A" ? " ↗" : ""}
-                    </i>
-                  ))}
-                </div>
-                <div className="fixture-score"><strong>{row.overallScore}</strong><small>/ 100</small></div>
-              </div>
-            ))}
-            {!teamOutlook.length && <div className="picker-empty">Fixture model loading…</div>}
-          </article>
-          <article className="panel">
-            <div className="panel-head"><div><span className="eyebrow">CHIP FORECAST</span><h2>Season leverage</h2></div><button className="text-button" onClick={() => router.push("/chips")}>Plan all →</button></div>
-            <div className="chip-call">
-              <div className="chip-icon">{nextPlannedChip?.chip === "Triple Captain" ? "×3" : nextPlannedChip?.chip.slice(0, 2).toUpperCase()}</div>
-              <div><b>{nextPlannedChip?.chip} · GW{nextPlannedChip?.gameweek}</b><p>{nextPlannedChip?.rationale}</p></div>
-              <strong>{nextPlannedChip?.locked ? "LOCKED" : "AI"}</strong>
-            </div>
-            <div className="chip-timeline">{chipPlan.filter((item) => item.half === 1).sort((a, b) => a.gameweek - b.gameweek).map((item) => <span className={item.locked ? "used" : "target"} key={item.id}>{item.gameweek}<i>{item.id.slice(0, 2)}</i></span>)}</div>
-            <p className="model-note">Manager-locked choices reshape the remaining chip route and the relevant squad-building objective.</p>
-          </article>
-        </div>
+      <div className="grid grid-cols-2 gap-3">
+        <StatCard
+          label="Bank"
+          value={`£${bankRemaining.toFixed(1)}m`}
+          footer={`Squad £${builderValidation.cost.toFixed(1)}m`}
+          tone={bankRemaining >= 0 ? "default" : "negative"}
+        />
+        <StatCard
+          label="Three gameweeks"
+          value={projectedGw3.toFixed(1)}
+          unit="xP"
+          footer="Starting XI"
+        />
+        <StatCard
+          label="Captain"
+          value={captain?.name ?? "—"}
+          footer={`+${captainEdge.toFixed(1)} on the next best`}
+        />
+        <StatCard
+          label="Flagged"
+          value={String(flagged.length)}
+          tone={flagged.length ? "warning" : "default"}
+          footer={flagged.length ? `${flagged[0].name}${flagged[0].startProbability !== null ? ` ${flagged[0].startProbability}% to start` : ""}` : "Everyone is expected to start"}
+        />
       </div>
+
+      <Card className="flex flex-col gap-3">
+        <CardHead
+          title="Your fixtures"
+          aside={<span className="t-body-sm text-text-muted">Next three</span>}
+        />
+        <FixtureTicker players={builderStarters} outlook={teamOutlook} />
+      </Card>
+
+      {nextPlannedChip && (
+        <Card className="flex flex-col gap-2">
+          <CardHead
+            eyebrow="Chip forecast"
+            title={`${nextPlannedChip.chip} · GW ${nextPlannedChip.gameweek}`}
+            aside={<Chip tone={nextPlannedChip.locked ? "ink" : "neutral"}>
+              {nextPlannedChip.locked ? "Yours" : "Model"}
+            </Chip>}
+          />
+          <p className="t-body m-0 text-text-muted">{nextPlannedChip.rationale}</p>
+          <Button href="/chips">Plan all chips</Button>
+        </Card>
+      )}
+
+      <p className="t-caption m-0 text-text-muted">
+        {feedStatus === "loading"
+          ? "Connecting to the official feed…"
+          : live
+            ? "Projections from the official FPL feed."
+            : "Live feed unavailable — showing the clearly labelled preview squad."}
+      </p>
+
+      <BottomSheet
+        open={whySheet && Boolean(transferSuggestion)}
+        onClose={() => setWhySheet(false)}
+        label="Why this transfer"
+        header={
+          <>
+            <span className="t-eyebrow text-text-muted">Why this transfer</span>
+            <span className="t-title-2">
+              {transferSuggestion?.outgoing.name} → {transferSuggestion?.incoming.name}
+            </span>
+          </>
+        }
+      >
+        {transferSuggestion && (
+          <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex flex-col gap-0.5 rounded-sm bg-surface-2 p-3">
+                <span className="t-caption text-text-muted">{transferSuggestion.outgoing.name}</span>
+                <span className="t-stat">{transferSuggestion.outgoing.xp3.toFixed(1)}</span>
+                <span className="t-caption text-text-muted">three-gameweek xP</span>
+              </div>
+              <div className="flex flex-col gap-0.5 rounded-sm bg-positive-soft p-3">
+                <span className="t-caption text-text-muted">{transferSuggestion.incoming.name}</span>
+                <span className="t-stat text-positive">
+                  {transferSuggestion.incoming.xp3.toFixed(1)}
+                </span>
+                <span className="t-caption text-text-muted">three-gameweek xP</span>
+              </div>
+            </div>
+            <p className="t-body m-0">
+              This is the highest-projected legal replacement at the same position under the
+              current budget and the three-players-per-club limit. It does not account for a
+              points hit: taking one costs four points, so a gain under four is not worth it on
+              its own.
+            </p>
+            <FixtureTicker
+              players={[transferSuggestion.incoming, transferSuggestion.outgoing]}
+              outlook={teamOutlook}
+              limit={2}
+            />
+          </div>
+        )}
+      </BottomSheet>
+    </div>
   );
 }
