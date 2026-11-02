@@ -1,5 +1,13 @@
 import type { DifferentialPlayer, HeadToHeadResponse } from "../../../lib/contracts/live";
-import { effectiveMultipliers, fixtureIsOver, liveEntryScore } from "../../../lib/live-standings";
+import { applyAutomaticSubs } from "../../../lib/auto-subs";
+import { provisionalBonus } from "../../../lib/live-bonus";
+import {
+  fixtureIsOver,
+  liveEntryScore,
+  livePointsFor,
+  substitutionContext,
+  type LiveContext,
+} from "../../../lib/live-standings";
 import { OfficialFplLeagueProvider } from "../../../lib/providers/league-provider";
 import {
   OfficialFplLiveProvider,
@@ -27,8 +35,8 @@ function fixtureFor(player: LivePlayerMeta | undefined, fixtures: LiveFixture[])
   return theirs.find((fixture) => !fixtureIsOver(fixture)) ?? theirs[0] ?? null;
 }
 
-function summarise(entry: EntryPicks, liveByPlayer: Parameters<typeof liveEntryScore>[1]) {
-  const score = liveEntryScore(entry, liveByPlayer);
+function summarise(entry: EntryPicks, context: LiveContext) {
+  const score = liveEntryScore(entry, context);
   return { points: score.points, netPoints: score.netPoints, transferCost: score.transferCost };
 }
 
@@ -77,8 +85,17 @@ export async function GET(request: Request) {
     const liveByPlayer = new Map(points.map((player) => [player.playerId, player]));
     const metaById = new Map(meta.map((player) => [player.playerId, player]));
     const teamShort = new Map(meta.map((player) => [player.team, player.teamShort]));
-    const yours = effectiveMultipliers(yourPicks);
-    const theirs = effectiveMultipliers(theirPicks);
+    // The eleven each manager is actually scoring on, substitutions included.
+    const context: LiveContext = {
+      liveByPlayer,
+      meta: metaById,
+      fixtures,
+      teamShort,
+      provisionalBonus: provisionalBonus(points, fixtures),
+    };
+    const rules = substitutionContext(context);
+    const yours = applyAutomaticSubs(yourPicks, rules).multipliers;
+    const theirs = applyAutomaticSubs(theirPicks, rules).multipliers;
 
     const captaincy: DifferentialPlayer[] = [];
     const onlyYou: DifferentialPlayer[] = [];
@@ -91,7 +108,7 @@ export async function GET(request: Request) {
       const theirMultiplier = theirs.get(playerId) ?? 0;
       if (yourMultiplier === 0 && theirMultiplier === 0) continue;
 
-      const scored = liveByPlayer.get(playerId)?.points ?? 0;
+      const scored = livePointsFor(playerId, context);
       if (yourMultiplier === theirMultiplier) {
         sharedCount += 1;
         sharedPoints += scored * yourMultiplier;
@@ -137,13 +154,13 @@ export async function GET(request: Request) {
         entryId: youId,
         teamName: youEntry.teamName,
         managerName: youEntry.managerName,
-        ...summarise(yourPicks, liveByPlayer),
+        ...summarise(yourPicks, context),
       },
       them: {
         entryId: themId,
         teamName: themEntry.teamName,
         managerName: themEntry.managerName,
-        ...summarise(theirPicks, liveByPlayer),
+        ...summarise(theirPicks, context),
       },
       shared: { count: sharedCount, points: sharedPoints },
       captaincy: captaincy.sort(byImpact),

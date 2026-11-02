@@ -5,12 +5,16 @@ import type { LiveManager } from "../../../lib/contracts/live";
 import { cn } from "../cn";
 import { Chip, PlayerRow, RankMove } from "../ui";
 import { monthProgress, signed } from "./format";
+import { WinChanceMeter } from "./win-bar";
+import { formatChance } from "./win-chance";
 
 /** What the live feed knows about this league right now. */
 export type LiveView = {
   byEntry: Map<number, LiveManager>;
   /** Points gained since the last poll, shown as a pill for a few seconds. */
   deltas: Map<number, number>;
+  /** The model's simulated chance of winning the month, by team. */
+  winChance?: Map<number, number>;
 };
 
 /** "GW 9 · 57 pts · 3 to play", with the live part only while it is live. */
@@ -106,6 +110,11 @@ export function StandingsList({
               </>
             }
             meta={metaFor(row, live)}
+            trailing={
+              live?.winChance?.has(row.entryId) ? (
+                <WinChanceMeter chance={live.winChance.get(row.entryId)!} you={you} />
+              ) : undefined
+            }
             figure={row.netPoints}
             figureNote={
               <span className={row.rank === 1 ? "text-positive" : "text-text-muted"}>
@@ -116,7 +125,9 @@ export function StandingsList({
         );
       })}
       <p className="t-caption m-0 border-t border-border px-3 py-2.5 text-text-muted">
-        Net of transfer hits. Tap a manager for their month in detail.
+        Net of transfer hits.
+        {live?.winChance ? " The bar is the model's estimated chance of winning the month." : ""}{" "}
+        Tap a manager for their month in detail.
       </p>
     </section>
   );
@@ -161,6 +172,7 @@ export function StandingsTable({
             <th scope="col" className="px-3 py-2 text-right">Gap</th>
             <th scope="col" className="px-3 py-2 text-right">Hits</th>
             <th scope="col" className="px-3 py-2 text-right">To play</th>
+            {live?.winChance && <th scope="col" className="px-3 py-2 text-right">Win</th>}
             <th scope="col" className="px-3 py-2 text-right">Bench</th>
           </tr>
         </thead>
@@ -219,6 +231,19 @@ export function StandingsTable({
                 <td className="t-data px-3 py-2 text-right text-text-muted">
                   {manager ? manager.playersToPlay : "—"}
                 </td>
+                {live?.winChance && (
+                  <td className="t-data px-3 py-2 text-right">
+                    <span className="flex items-center justify-end gap-2">
+                      <span className="hidden w-14 wide:block">
+                        <WinChanceMeter
+                          chance={live.winChance.get(row.entryId) ?? 0}
+                          you={you}
+                        />
+                      </span>
+                      {formatChance(live.winChance.get(row.entryId) ?? 0)}
+                    </span>
+                  </td>
+                )}
                 <td className="t-data px-3 py-2 text-right text-text-muted">{row.pointsOnBench}</td>
               </tr>
             );

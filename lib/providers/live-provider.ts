@@ -99,7 +99,8 @@ type RawBootstrap = {
 type RawLive = {
   elements: Array<{
     id: number;
-    stats: { total_points: number; minutes: number; played?: boolean };
+    stats: { total_points: number; minutes: number; played?: boolean; bps?: number; bonus?: number };
+    explain?: Array<{ fixture: number }>;
   }>;
 };
 
@@ -186,6 +187,9 @@ export class OfficialFplLiveProvider implements FplLiveProvider {
       points: element.stats?.total_points ?? 0,
       minutes: element.stats?.minutes ?? 0,
       played: Boolean(element.stats?.played ?? (element.stats?.minutes ?? 0) > 0),
+      bps: element.stats?.bps ?? 0,
+      bonus: element.stats?.bonus ?? 0,
+      fixtures: (element.explain ?? []).map((entry) => entry.fixture),
     }));
   }
 

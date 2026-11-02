@@ -2,6 +2,8 @@
 
 import type { MonthlyResult, MonthlyStanding } from "../../../lib/contracts/leagues";
 import { Icon, LiveDot } from "../ui";
+import { WinChanceBar } from "./win-bar";
+import { formatChance, winChanceSegments } from "./win-chance";
 import { firstName, gameweekRangeLabel, monthProgress, ordinal } from "./format";
 
 function headline(
@@ -49,9 +51,12 @@ function Figure({ label, value }: { label: string; value: string }) {
 export function MonthHero({
   result,
   youEntryId,
+  winChance,
 }: {
   result: MonthlyResult;
   youEntryId: number | null;
+  /** The model's simulated chance of winning the month, by team. */
+  winChance?: Map<number, number> | null;
 }) {
   const rows = result.standings;
   const leader = rows[0];
@@ -101,10 +106,27 @@ export function MonthHero({
             label={latest ? `GW ${latest.event}` : "Latest GW"}
             value={latest ? `${latest.points} pts` : "—"}
           />
-          <Figure
-            label="Hits this month"
-            value={subject.transferCost > 0 ? `−${subject.transferCost} pts` : "None"}
-          />
+          {winChance && subject ? (
+            <Figure
+              label={you ? "Your chance" : "Their chance"}
+              value={formatChance(winChance.get(subject.entryId) ?? 0)}
+            />
+          ) : (
+            <Figure
+              label="Hits this month"
+              value={subject.transferCost > 0 ? `−${subject.transferCost} pts` : "None"}
+            />
+          )}
+        </div>
+      )}
+
+      {winChance && (
+        <div className="flex flex-col gap-1.5">
+          <WinChanceBar segments={winChanceSegments(winChance, result, youEntryId)} />
+          <span className="t-caption text-on-ink-muted">
+            Chance to win {result.month.name} — the model&apos;s estimate, from simulating the
+            fixtures left.
+          </span>
         </div>
       )}
     </section>

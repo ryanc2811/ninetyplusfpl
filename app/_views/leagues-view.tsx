@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { LeagueInsightsResponse } from "../../lib/contracts/leagues";
 import { AlertToggles, BadgeGrid, MonthsWon, SeasonMonths } from "../_components/leagues/awards";
 import { ConnectCard } from "../_components/leagues/connect";
@@ -11,6 +11,7 @@ import { MonthTabs, monthChoices } from "../_components/leagues/month-tabs";
 import { MonthHero } from "../_components/leagues/month-hero";
 import { RaceChart } from "../_components/leagues/race-chart";
 import { StandingsList, StandingsTable, standingFor } from "../_components/leagues/standings";
+import { monthWinChance } from "../_components/leagues/win-chance";
 import { mergeLiveIntoMonth } from "../../lib/live-standings";
 import { updatedAgoLabel, useLiveLeague } from "../_state/use-live-league";
 import {
@@ -23,7 +24,7 @@ import {
   Skeleton,
   SkeletonRows,
 } from "../_components/ui";
-import { useAppState } from "../_state/app-state";
+import { useAppState, type Player } from "../_state/app-state";
 
 function LoadingLeague() {
   return (
@@ -71,10 +72,12 @@ function ThisMonth({
   insights,
   youEntryId,
   leagueId,
+  players,
 }: {
   insights: LeagueInsightsResponse;
   youEntryId: number | null;
   leagueId: number | null;
+  players: Player[];
 }) {
   const choices = monthChoices(insights.months, insights.upcomingMonths);
   const [monthKey, setMonthKey] = useState<string | null>(null);
@@ -86,21 +89,10 @@ function ThisMonth({
     ?? choices.find((choice) => choice.kind === "played" && choice.result.month.current)
     ?? choices[choices.length - 1];
 
-  if (!active) {
-    return (
-      <Card>
-        <EmptyState icon="calendar" title="No months to show yet">
-          Monthly awards unlock once Gameweek 1 has been scored and checked.
-        </EmptyState>
-      </Card>
-    );
-  }
-
   // History is authoritative once a Gameweek is checked, so the live feed only
   // folds in while it is still provisional.
   const liveIsRelevant = Boolean(live.data?.started && !live.data.dataChecked);
-  const liveView = liveIsRelevant ? { byEntry: live.byEntry, deltas: live.deltas } : undefined;
-  const played = active.kind === "played" ? active.result : null;
+  const played = active?.kind === "played" ? active.result : null;
   const result =
     played && liveIsRelevant && live.data
       ? mergeLiveIntoMonth(
@@ -114,6 +106,40 @@ function ThisMonth({
           live.data.event,
         )
       : played;
+
+  /*
+   * Simulating the month is the most expensive thing this screen does, so it
+   * only runs when the table or the live feed actually moves.
+   */
+  const chances = useMemo(
+    () =>
+      result && liveIsRelevant && live.data
+        ? monthWinChance({
+            result,
+            liveByEntry: live.byEntry,
+            players,
+            insights,
+            event: live.data.event,
+          })
+        : null,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [result, liveIsRelevant, live.data?.retrievedAt, players, insights],
+  );
+
+  const liveView = liveIsRelevant
+    ? { byEntry: live.byEntry, deltas: live.deltas, winChance: chances ?? undefined }
+    : undefined;
+
+  if (!active) {
+    return (
+      <Card>
+        <EmptyState icon="calendar" title="No months to show yet">
+          Monthly awards unlock once Gameweek 1 has been scored and checked.
+        </EmptyState>
+      </Card>
+    );
+  }
+
 
   /**
    * The connected manager is not always in the analysed sample of a big
@@ -167,7 +193,7 @@ function ThisMonth({
       ) : result ? (
         <>
           {liveStrip}
-          <MonthHero result={result} youEntryId={youEntryId} />
+          <MonthHero result={result} youEntryId={youEntryId} winChance={chances} />
           <div className="flex flex-col gap-3 expanded:grid expanded:grid-cols-[minmax(0,1fr)_400px] expanded:items-start">
             <div className="flex flex-col gap-3">
               <StandingsList
@@ -222,6 +248,7 @@ export function LeaguesView() {
     leagueStatus,
     openLeague,
     disconnectTeam,
+    players,
   } = useAppState();
   const [tab, setTab] = useState<"month" | "season">("month");
 
@@ -311,6 +338,7 @@ export function LeaguesView() {
               insights={leagueInsights}
               youEntryId={youEntryId}
               leagueId={selectedLeagueId}
+              players={players}
             />
           ) : (
             <div className="flex flex-col gap-3">

@@ -1,4 +1,5 @@
 import type { LeagueLiveResponse } from "../../../../../lib/contracts/live";
+import { provisionalBonus } from "../../../../../lib/live-bonus";
 import { liveManager } from "../../../../../lib/live-standings";
 import { OfficialFplLeagueProvider } from "../../../../../lib/providers/league-provider";
 import { OfficialFplLiveProvider } from "../../../../../lib/providers/live-provider";
@@ -54,6 +55,7 @@ export async function GET(
     ]);
 
     const liveByPlayer = new Map(points.map((player) => [player.playerId, player]));
+    const bonus = provisionalBonus(points, fixtures);
     const metaById = new Map(meta.map((player) => [player.playerId, player]));
     const teamShort = new Map(meta.map((player) => [player.team, player.teamShort]));
 
@@ -69,7 +71,13 @@ export async function GET(
       dataChecked: status.dataChecked,
       retrievedAt: new Date().toISOString(),
       managers: picks.map((entry) =>
-        liveManager(entry, liveByPlayer, fixtures, metaById, teamShort),
+        liveManager(entry, {
+          liveByPlayer,
+          meta: metaById,
+          fixtures,
+          teamShort,
+          provisionalBonus: bonus,
+        }),
       ),
       provenance: {
         source: "Fantasy Premier League public web data",

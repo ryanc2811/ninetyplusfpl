@@ -1,9 +1,11 @@
 import type {
+  AppliedSubstitution,
   LiveManager,
   LivePlayerPoints,
   PlayerToPlay,
 } from "./contracts/live.ts";
 import type { MonthlyResult, MonthlyStanding } from "./contracts/leagues.ts";
+import { applyAutomaticSubs, type SubstitutionContext } from "./auto-subs.ts";
 import { assignRanks } from "./league-insights.ts";
 import type { EntryPicks, LiveFixture, LivePlayerMeta } from "./providers/live-provider.ts";
 
@@ -16,40 +18,25 @@ import type { EntryPicks, LiveFixture, LivePlayerMeta } from "./providers/live-p
  * when they are hardest to check by hand, so this is kept away from fetching.
  */
 
-/**
- * The multiplier each pick is actually scoring on.
- *
- * Automatic substitutions and the vice-captain promotion are applied by the
- * official game at the end of a Gameweek, so during one the published picks
- * are what count; once they appear the feed has already made the swap and the
- * bench player is the one scoring.
- */
-export function effectiveMultipliers(picks: EntryPicks): Map<number, number> {
-  const multipliers = new Map(picks.picks.map((pick) => [pick.playerId, pick.multiplier]));
-  for (const sub of picks.automaticSubs) {
-    const out = multipliers.get(sub.out) ?? 0;
-    multipliers.set(sub.out, 0);
-    multipliers.set(sub.in, Math.max(out, 1));
-  }
-  return multipliers;
-}
+/** Everything a live score needs to know about the Gameweek being played. */
+export type LiveContext = {
+  liveByPlayer: Map<number, LivePlayerPoints>;
+  meta: Map<number, LivePlayerMeta>;
+  fixtures: LiveFixture[];
+  teamShort: Map<number, string>;
+  /**
+   * Bonus the game has decided but not yet credited. Leaving it out makes
+   * every score short on the evening of a match.
+   */
+  provisionalBonus?: Map<number, number>;
+};
 
-/** A manager's live score: picks against live points, net of this week's hits. */
-export function liveEntryScore(
-  picks: EntryPicks,
-  liveByPlayer: Map<number, LivePlayerPoints>,
-): { points: number; netPoints: number; transferCost: number } {
-  const multipliers = effectiveMultipliers(picks);
-  let points = 0;
-  for (const [playerId, multiplier] of multipliers) {
-    if (multiplier <= 0) continue;
-    points += (liveByPlayer.get(playerId)?.points ?? 0) * multiplier;
-  }
-  return {
-    points,
-    netPoints: points - picks.transferCost,
-    transferCost: picks.transferCost,
-  };
+/** A player's live points including bonus that is settled but not yet credited. */
+export function livePointsFor(playerId: number, context: LiveContext) {
+  return (
+    (context.liveByPlayer.get(playerId)?.points ?? 0)
+    + (context.provisionalBonus?.get(playerId) ?? 0)
+  );
 }
 
 /**
@@ -64,76 +51,110 @@ export function fixtureIsOver(fixture: LiveFixture) {
   return fixture.finished || fixture.finishedProvisional;
 }
 
+/** The fixtures a player's club has left in this Gameweek, if any. */
+function remainingFixtureFor(playerId: number, context: LiveContext) {
+  const team = context.meta.get(playerId)?.team;
+  if (team === undefined) return null;
+  const theirs = context.fixtures.filter(
+    (fixture) => fixture.homeTeam === team || fixture.awayTeam === team,
+  );
+  const pending = theirs.filter((fixture) => !fixtureIsOver(fixture));
+  if (!pending.length) return null;
+  // In a double Gameweek the next one to kick off is the one that matters.
+  return [...pending].sort((a, b) => (a.kickoff ?? "").localeCompare(b.kickoff ?? ""))[0];
+}
+
+/** The view of the Gameweek that the substitution rules are applied against. */
+export function substitutionContext(context: LiveContext): SubstitutionContext {
+  return {
+    position: (playerId) => context.meta.get(playerId)?.position ?? null,
+    minutes: (playerId) => context.liveByPlayer.get(playerId)?.minutes ?? 0,
+    fixtureIsOver: (playerId) => remainingFixtureFor(playerId, context) === null,
+  };
+}
+
+/**
+ * A manager's live score.
+ *
+ * Automatic substitutions are applied, so a starter who did not turn up is
+ * replaced by the bench exactly as the game will replace them. Without that
+ * the score is wrong for every manager with a blank in their eleven.
+ */
+export function liveEntryScore(picks: EntryPicks, context: LiveContext) {
+  const subs = applyAutomaticSubs(picks, substitutionContext(context));
+  let points = 0;
+  for (const [playerId, multiplier] of subs.multipliers) {
+    if (multiplier <= 0) continue;
+    points += livePointsFor(playerId, context) * multiplier;
+  }
+  return {
+    points,
+    netPoints: points - picks.transferCost,
+    transferCost: picks.transferCost,
+    subs,
+  };
+}
+
 function fixtureLabel(fixture: LiveFixture, teamShort: Map<number, string>) {
   return `${teamShort.get(fixture.homeTeam) ?? "?"} v ${teamShort.get(fixture.awayTeam) ?? "?"}`;
 }
 
 /**
- * The starters whose fixture has not finished.
+ * The players in the scoring eleven whose fixture has not finished.
  *
- * A player with two fixtures in a double Gameweek still has points coming
- * while either of them is unplayed, so any unfinished fixture counts.
+ * It reads the eleven after substitutions, because a starter the bench has
+ * already replaced has nothing left to give.
  */
-export function playersStillToPlay(
-  picks: EntryPicks,
-  fixtures: LiveFixture[],
-  meta: Map<number, LivePlayerMeta>,
-  teamShort: Map<number, string>,
-): PlayerToPlay[] {
-  const multipliers = effectiveMultipliers(picks);
-  const unfinishedByTeam = new Map<number, LiveFixture>();
-  for (const fixture of fixtures) {
-    if (fixtureIsOver(fixture)) continue;
-    for (const team of [fixture.homeTeam, fixture.awayTeam]) {
-      const existing = unfinishedByTeam.get(team);
-      if (!existing || (fixture.kickoff ?? "") < (existing.kickoff ?? "")) {
-        unfinishedByTeam.set(team, fixture);
-      }
-    }
-  }
-
+export function playersStillToPlay(picks: EntryPicks, context: LiveContext): PlayerToPlay[] {
+  const { multipliers } = applyAutomaticSubs(picks, substitutionContext(context));
   const toPlay: PlayerToPlay[] = [];
+
   for (const pick of picks.picks) {
-    if ((multipliers.get(pick.playerId) ?? 0) <= 0) continue;
-    const player = meta.get(pick.playerId);
-    if (!player) continue;
-    const fixture = unfinishedByTeam.get(player.team);
-    if (!fixture) continue;
+    const multiplier = multipliers.get(pick.playerId) ?? 0;
+    if (multiplier <= 0) continue;
+    const player = context.meta.get(pick.playerId);
+    const fixture = remainingFixtureFor(pick.playerId, context);
+    if (!player || !fixture) continue;
     toPlay.push({
       playerId: pick.playerId,
       name: player.name,
       team: player.teamShort,
-      fixture: fixtureLabel(fixture, teamShort),
+      fixture: fixtureLabel(fixture, context.teamShort),
       kickoff: fixture.kickoff,
-      multiplier: multipliers.get(pick.playerId) ?? 1,
+      multiplier,
     });
   }
   return toPlay.sort((a, b) => b.multiplier - a.multiplier || a.name.localeCompare(b.name));
 }
 
 /** Everything the live endpoint reports for one manager. */
-export function liveManager(
-  picks: EntryPicks,
-  liveByPlayer: Map<number, LivePlayerPoints>,
-  fixtures: LiveFixture[],
-  meta: Map<number, LivePlayerMeta>,
-  teamShort: Map<number, string>,
-): LiveManager {
-  const score = liveEntryScore(picks, liveByPlayer);
-  const multipliers = effectiveMultipliers(picks);
-  const starters = picks.picks.filter((pick) => (multipliers.get(pick.playerId) ?? 0) > 0);
-  const toPlay = playersStillToPlay(picks, fixtures, meta, teamShort);
+export function liveManager(picks: EntryPicks, context: LiveContext): LiveManager {
+  const score = liveEntryScore(picks, context);
+  const toPlay = playersStillToPlay(picks, context);
   const toPlayIds = new Set(toPlay.map((player) => player.playerId));
+  const scoring = [...score.subs.multipliers.entries()].filter(([, multiplier]) => multiplier > 0);
+  const name = (playerId: number) => context.meta.get(playerId)?.name ?? `Player ${playerId}`;
+
+  const substitutions: AppliedSubstitution[] = score.subs.substitutions.map((sub) => ({
+    out: name(sub.out),
+    in: name(sub.in),
+    official: score.subs.official,
+  }));
 
   return {
     entryId: picks.entryId,
-    ...score,
-    playersPlayed: starters.filter(
-      (pick) => !toPlayIds.has(pick.playerId) && (liveByPlayer.get(pick.playerId)?.played ?? false),
+    points: score.points,
+    netPoints: score.netPoints,
+    transferCost: score.transferCost,
+    playersPlayed: scoring.filter(
+      ([playerId]) =>
+        !toPlayIds.has(playerId) && (context.liveByPlayer.get(playerId)?.played ?? false),
     ).length,
     playersToPlay: toPlay.length,
     toPlay,
     activeChip: picks.activeChip,
+    substitutions,
+    captainMoved: score.subs.captainMoved,
   };
 }
 

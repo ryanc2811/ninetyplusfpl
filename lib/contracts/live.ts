@@ -13,10 +13,20 @@
 /** One player's live return in the Gameweek being played. */
 export type LivePlayerPoints = {
   playerId: number;
+  /**
+   * Points the feed has already credited. Bonus only appears here once it is
+   * confirmed, which is why provisional bonus is worked out separately.
+   */
   points: number;
   minutes: number;
   /** The official feed's own flag: the player has appeared. */
   played: boolean;
+  /** Bonus points system score, which decides provisional bonus. */
+  bps: number;
+  /** Bonus already credited, and therefore already inside `points`. */
+  bonus: number;
+  /** The fixtures this player has appeared in this Gameweek. */
+  fixtures: number[];
 };
 
 export type LiveEventStatus = {
@@ -38,6 +48,14 @@ export type PlayerToPlay = {
   multiplier: number;
 };
 
+/** An automatic substitution, named for the people reading it. */
+export type AppliedSubstitution = {
+  out: string;
+  in: string;
+  /** True once the official feed has published it rather than it being projected. */
+  official: boolean;
+};
+
 export type LiveManager = {
   entryId: number;
   /** Live Gameweek score with captain multipliers applied, before hits. */
@@ -49,6 +67,10 @@ export type LiveManager = {
   playersToPlay: number;
   toPlay: PlayerToPlay[];
   activeChip: string | null;
+  /** Bench players the game has brought on for a starter who did not play. */
+  substitutions: AppliedSubstitution[];
+  /** True when the captain blanked and the armband passed to the vice. */
+  captainMoved: boolean;
 };
 
 export type LeagueLiveResponse = {

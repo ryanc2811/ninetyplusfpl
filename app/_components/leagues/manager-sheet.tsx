@@ -82,6 +82,30 @@ export function ManagerSheet({
         />
       </div>
 
+      {live && (live.substitutions.length > 0 || live.captainMoved) && (
+        <div className="flex flex-col gap-1">
+          <span className="t-eyebrow text-text-muted">The bench stepped in</span>
+          {live.substitutions.map((sub) => (
+            <div
+              key={`${sub.out}-${sub.in}`}
+              className="flex min-h-[var(--tap-min)] items-center justify-between gap-3 border-b border-border"
+            >
+              <span className="t-body">
+                <b>{sub.in}</b> came on for {sub.out}
+              </span>
+              <Chip tone={sub.official ? "neutral" : "warning"}>
+                {sub.official ? "Confirmed" : "Projected"}
+              </Chip>
+            </div>
+          ))}
+          {live.captainMoved && (
+            <p className="t-body m-0 text-text-muted">
+              The captain did not play, so the armband passed to the vice-captain.
+            </p>
+          )}
+        </div>
+      )}
+
       {live && (
         <div className="flex flex-col gap-1">
           <span className="t-eyebrow text-text-muted">Still to play</span>

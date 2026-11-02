@@ -2,15 +2,15 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { LivePlayerPoints } from "../lib/contracts/live.ts";
 import type { MonthlyResult, MonthlyStanding } from "../lib/contracts/leagues.ts";
+import { parseTeamId } from "../lib/fpl-team-id.ts";
 import {
-  effectiveMultipliers,
   liveEntryScore,
   liveManager,
   mergeLiveIntoMonth,
   playersStillToPlay,
+  type LiveContext,
 } from "../lib/live-standings.ts";
 import type { EntryPicks, LiveFixture, LivePlayerMeta } from "../lib/providers/live-provider.ts";
-import { parseTeamId } from "../lib/fpl-team-id.ts";
 
 function picks(overrides: Partial<EntryPicks> & { entryId: number }): EntryPicks {
   return {
@@ -36,8 +36,27 @@ function pick(playerId: number, multiplier: number, position = playerId) {
   };
 }
 
-function live(points: Record<number, number>, minutes: Record<number, number> = {}) {
-  return new Map<number, LivePlayerPoints>(
+const META: LivePlayerMeta[] = [
+  { playerId: 10, name: "Salah", team: 1, teamShort: "LIV", position: "MID" },
+  { playerId: 11, name: "Haaland", team: 2, teamShort: "MCI", position: "FWD" },
+  { playerId: 12, name: "Saka", team: 3, teamShort: "ARS", position: "MID" },
+  { playerId: 13, name: "Gabriel", team: 3, teamShort: "ARS", position: "DEF" },
+  { playerId: 20, name: "Raya", team: 3, teamShort: "ARS", position: "GK" },
+];
+
+const FIXTURES: LiveFixture[] = [
+  { id: 1, homeTeam: 1, awayTeam: 4, started: false, finished: false, finishedProvisional: false, kickoff: "2026-11-07T16:30:00Z" },
+  { id: 2, homeTeam: 2, awayTeam: 5, started: true, finished: true, finishedProvisional: true, kickoff: "2026-11-07T12:30:00Z" },
+  { id: 3, homeTeam: 3, awayTeam: 6, started: true, finished: false, finishedProvisional: false, kickoff: "2026-11-07T15:00:00Z" },
+];
+
+/** A live Gameweek: points and minutes per player, over the fixtures above. */
+function context(
+  points: Record<number, number>,
+  minutes: Record<number, number> = {},
+  fixtures: LiveFixture[] = FIXTURES,
+): LiveContext {
+  const liveByPlayer = new Map<number, LivePlayerPoints>(
     Object.entries(points).map(([id, value]) => [
       Number(id),
       {
@@ -45,9 +64,18 @@ function live(points: Record<number, number>, minutes: Record<number, number> = 
         points: value,
         minutes: minutes[Number(id)] ?? 90,
         played: (minutes[Number(id)] ?? 90) > 0,
+        bps: 0,
+        bonus: 0,
+        fixtures: [],
       },
     ]),
   );
+  return {
+    liveByPlayer,
+    meta: new Map(META.map((player) => [player.playerId, player])),
+    fixtures,
+    teamShort: new Map(META.map((player) => [player.team, player.teamShort])),
+  };
 }
 
 function standing(overrides: Partial<MonthlyStanding> & { entryId: number; teamName: string }): MonthlyStanding {
@@ -86,14 +114,13 @@ function month(standings: MonthlyStanding[], overrides: Partial<MonthlyResult["m
 
 // --- a manager's live score ----------------------------------------------
 
-test("only the starting eleven scores, and the captain scores twice", () => {
+test("only the scoring eleven counts, and the captain counts twice", () => {
   const entry = picks({
     entryId: 1,
     picks: [pick(10, 1), pick(11, 2), pick(12, 1), pick(13, 0)],
   });
-  const score = liveEntryScore(entry, live({ 10: 6, 11: 9, 12: 2, 13: 14 }));
-  // 6 + (9 × 2) + 2, with the 14-point bench player ignored.
-  assert.equal(score.points, 26);
+  // 6 + (9 × 2) + 2, with the bench defender's 14 points ignored.
+  assert.equal(liveEntryScore(entry, context({ 10: 6, 11: 9, 12: 2, 13: 14 })).points, 26);
 });
 
 test("a triple captain multiplies by three", () => {
@@ -102,77 +129,41 @@ test("a triple captain multiplies by three", () => {
     activeChip: "3xc",
     picks: [pick(10, 3), pick(11, 1)],
   });
-  assert.equal(liveEntryScore(entry, live({ 10: 12, 11: 3 })).points, 39);
+  assert.equal(liveEntryScore(entry, context({ 10: 12, 11: 3 })).points, 39);
 });
 
 test("a hit comes off the live score, which is what the month counts", () => {
   const entry = picks({ entryId: 1, transferCost: 8, picks: [pick(10, 1)] });
-  const score = liveEntryScore(entry, live({ 10: 50 }));
+  const score = liveEntryScore(entry, context({ 10: 50 }));
   assert.equal(score.points, 50);
   assert.equal(score.netPoints, 42);
   assert.equal(score.transferCost, 8);
 });
 
-test("an automatic substitution moves the multiplier to the bench player", () => {
+test("a published substitution is scored as the game scored it", () => {
   const entry = picks({
     entryId: 1,
-    picks: [pick(10, 1), pick(20, 0)],
-    automaticSubs: [{ out: 10, in: 20 }],
+    picks: [pick(11, 1), pick(13, 0)],
+    automaticSubs: [{ out: 11, in: 13 }],
   });
-  const multipliers = effectiveMultipliers(entry);
-  assert.equal(multipliers.get(10), 0);
-  assert.equal(multipliers.get(20), 1);
-  assert.equal(liveEntryScore(entry, live({ 10: 0, 20: 7 })).points, 7);
+  const score = liveEntryScore(entry, context({ 11: 0, 13: 7 }, { 11: 0 }));
+  assert.equal(score.points, 7);
+  assert.equal(score.subs.official, true);
 });
 
 // --- still to play --------------------------------------------------------
 
-const META: LivePlayerMeta[] = [
-  { playerId: 10, name: "Salah", team: 1, teamShort: "LIV", position: "MID" },
-  { playerId: 11, name: "Haaland", team: 2, teamShort: "MCI", position: "FWD" },
-  { playerId: 12, name: "Saka", team: 3, teamShort: "ARS", position: "MID" },
-  { playerId: 20, name: "Raya", team: 3, teamShort: "ARS", position: "GK" },
-];
-const metaById = new Map(META.map((player) => [player.playerId, player]));
-const teamShort = new Map(META.map((player) => [player.team, player.teamShort]));
-
-const FIXTURES: LiveFixture[] = [
-  { id: 1, homeTeam: 1, awayTeam: 4, started: false, finished: false, finishedProvisional: false, kickoff: "2026-11-07T16:30:00Z" },
-  { id: 2, homeTeam: 2, awayTeam: 5, started: true, finished: true, finishedProvisional: true, kickoff: "2026-11-07T12:30:00Z" },
-  { id: 3, homeTeam: 3, awayTeam: 6, started: true, finished: false, finishedProvisional: false, kickoff: "2026-11-07T15:00:00Z" },
-];
-
-test("players still to play are the starters whose fixture has not finished", () => {
+test("players still to play are the scoring eleven whose fixture has not finished", () => {
   const entry = picks({
     entryId: 1,
     picks: [pick(10, 2), pick(11, 1), pick(12, 1), pick(20, 0)],
   });
-  const toPlay = playersStillToPlay(entry, FIXTURES, metaById, teamShort);
+  const toPlay = playersStillToPlay(entry, context({ 10: 0, 11: 9, 12: 1 }));
   // Haaland's fixture is over; the benched keeper never counted.
   assert.deepEqual(toPlay.map((player) => player.name), ["Salah", "Saka"]);
   // The captain is listed first, because that is the one that swings a month.
   assert.equal(toPlay[0].multiplier, 2);
   assert.equal(toPlay[0].fixture, "LIV v ?");
-});
-
-test("a manager in progress reports both what has played and what has not", () => {
-  const entry = picks({
-    entryId: 7,
-    transferCost: 4,
-    picks: [pick(10, 2), pick(11, 1), pick(12, 1)],
-  });
-  const result = liveManager(
-    entry,
-    live({ 10: 2, 11: 9, 12: 1 }, { 10: 20, 11: 90, 12: 60 }),
-    FIXTURES,
-    metaById,
-    teamShort,
-  );
-  assert.equal(result.points, 2 * 2 + 9 + 1);
-  assert.equal(result.netPoints, 10);
-  assert.equal(result.playersToPlay, 2);
-  // Only Haaland's fixture is complete.
-  assert.equal(result.playersPlayed, 1);
 });
 
 test("a match that has been played is over, even before bonus is confirmed", () => {
@@ -182,7 +173,78 @@ test("a match that has been played is over, even before bonus is confirmed", () 
     { id: 3, homeTeam: 3, awayTeam: 6, started: true, finished: false, finishedProvisional: true, kickoff: "2026-11-07T15:00:00Z" },
   ];
   const entry = picks({ entryId: 1, picks: [pick(12, 1)] });
-  assert.deepEqual(playersStillToPlay(entry, played, metaById, teamShort), []);
+  assert.deepEqual(playersStillToPlay(entry, context({ 12: 4 }, {}, played)), []);
+});
+
+test("a manager in progress reports what has played, what has not, and any substitution", () => {
+  const entry = picks({
+    entryId: 7,
+    transferCost: 4,
+    picks: [pick(10, 2), pick(11, 1), pick(12, 1)],
+  });
+  const result = liveManager(entry, context({ 10: 2, 11: 9, 12: 1 }, { 10: 20, 11: 90, 12: 60 }));
+  assert.equal(result.points, 2 * 2 + 9 + 1);
+  assert.equal(result.netPoints, 10);
+  assert.equal(result.playersToPlay, 2);
+  // Only Haaland's fixture is complete.
+  assert.equal(result.playersPlayed, 1);
+  assert.deepEqual(result.substitutions, []);
+});
+
+test("a blank is substituted while the Gameweek is still being played", () => {
+  /*
+   * A full squad whose starting forward never appeared. The official feed
+   * publishes no substitution until the Gameweek ends, so without projecting
+   * one this manager's score would be missing the bench player who replaced
+   * him — which is the score everyone else can see on the official site.
+   */
+  const shape: Array<[number, LivePlayerMeta["position"], number, number]> = [
+    // id, position, multiplier, points
+    [100, "GK", 1, 2],
+    [101, "DEF", 1, 6], [102, "DEF", 1, 2], [103, "DEF", 1, 1], [104, "DEF", 1, 2],
+    [105, "MID", 1, 5], [106, "MID", 1, 3], [107, "MID", 1, 8], [108, "MID", 1, 2],
+    [109, "FWD", 1, 7], [110, "FWD", 1, 0],
+    [111, "GK", 0, 3], [112, "MID", 0, 9], [113, "DEF", 0, 4], [114, "FWD", 0, 6],
+  ];
+  const squadMeta = new Map<number, LivePlayerMeta>(
+    shape.map(([id, position]) => [
+      id,
+      { playerId: id, name: `P${id}`, team: 9, teamShort: "TST", position },
+    ]),
+  );
+  const over: LiveFixture[] = [
+    { id: 9, homeTeam: 9, awayTeam: 8, started: true, finished: false, finishedProvisional: true, kickoff: "2026-11-07T15:00:00Z" },
+  ];
+  const squadContext: LiveContext = {
+    liveByPlayer: new Map(
+      shape.map(([id, , , points]) => [
+        id,
+        {
+          playerId: id,
+          points,
+          minutes: id === 110 ? 0 : 90,
+          played: id !== 110,
+          bps: 0,
+          bonus: 0,
+          fixtures: [9],
+        },
+      ]),
+    ),
+    meta: squadMeta,
+    fixtures: over,
+    teamShort: new Map([[9, "TST"], [8, "OPP"]]),
+  };
+  const entry = picks({
+    entryId: 7,
+    picks: shape.map(([id, , multiplier], index) => pick(id, multiplier, index + 1)),
+  });
+
+  const result = liveManager(entry, squadContext);
+  // A 4-4-2 losing a forward becomes a legal 4-5-1, so the bench midfielder
+  // — the leftmost outfielder who played — comes on and scores nine.
+  assert.deepEqual(result.substitutions, [{ out: "P110", in: "P112", official: false }]);
+  assert.equal(result.points, 2 + 6 + 2 + 1 + 2 + 5 + 3 + 8 + 2 + 7 + 9);
+  assert.equal(result.playersToPlay, 0);
 });
 
 // --- folding the live gameweek into the month -----------------------------
