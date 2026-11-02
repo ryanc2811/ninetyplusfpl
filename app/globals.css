@@ -5,21 +5,28 @@
 
    Tailwind's preflight does the rest; these are the few rules the design
    system owns outright.
+
+   These live in `@layer base` deliberately. An unlayered element rule beats
+   every layered utility, so `button { color: inherit }` outside a layer would
+   quietly override `text-on-action` and leave the primary button's label the
+   page's reading colour on a lime fill.
 --------------------------------------------------------------------------- */
 
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--sans);
-}
+@layer base {
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+  }
 
-button,
-input,
-select,
-textarea {
-  font: inherit;
-  color: inherit;
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
 }
 
 /* Honour the platform accessibility setting: no motion, no exceptions. */

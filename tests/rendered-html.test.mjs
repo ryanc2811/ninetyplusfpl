@@ -100,6 +100,19 @@ test("ships the design tokens and the mobile-first floors", async () => {
   // Both themes ship, and the OS preference is followed unless light is chosen.
   assert.match(css, /:root\[data-theme="dark"\]/);
   assert.match(css, /@media \(prefers-color-scheme: dark\)/);
+  /*
+   * The element reset has to stay inside a layer. An unlayered `button {
+   * color: inherit }` outranks every Tailwind utility, which once left the
+   * primary button's label in the page's reading colour on its lime fill —
+   * about 1.4:1, unreadable in both themes.
+   */
+  const reset = css.slice(0, css.indexOf("NINETY+ design tokens"));
+  assert.match(reset, /@layer base \{/);
+  assert.doesNotMatch(
+    reset.replace(/@layer base \{[\s\S]*?\n\}/, ""),
+    /^(button|input|select|textarea)[,\s]/m,
+  );
+
   // Nothing below 12px, 44px tap targets, and the tab bar clears the safe area.
   assert.match(css, /--tap-min: 44px;/);
   assert.match(css, /\.t-caption \{ font-family: var\(--sans\); font-size: 12px;/);
