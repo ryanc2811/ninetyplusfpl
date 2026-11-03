@@ -1,4 +1,5 @@
 import type { LiveEventStatus, LivePlayerPoints } from "../contracts/live.ts";
+import { fetchFpl } from "./fpl-request.ts";
 
 /**
  * Official FPL live adapter.
@@ -142,14 +143,7 @@ export class OfficialFplLiveProvider implements FplLiveProvider {
 
   private async fetchJson<T>(url: string, revalidate: number): Promise<T> {
     this.requestUrls.push(url);
-    const response = await fetch(url, {
-      headers: { Accept: "application/json", "User-Agent": "NinetyPlus/3.0" },
-      next: { revalidate },
-    });
-    if (!response.ok) {
-      throw new Error(`FPL live provider returned ${response.status} for ${url}`);
-    }
-    return (await response.json()) as T;
+    return fetchFpl<T>(url, revalidate);
   }
 
   /** The Gameweek being played, or the one just finished while bonus settles. */

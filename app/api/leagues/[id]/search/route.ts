@@ -1,3 +1,4 @@
+import { describeFplFailure, logFplFailure } from "../../../../../lib/providers/fpl-request";
 import { OfficialFplLeagueProvider } from "../../../../../lib/providers/league-provider";
 
 /**
@@ -66,16 +67,8 @@ export async function GET(
       headers: { "Cache-Control": "public, max-age=300, s-maxage=900" },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Search failed";
-    const missing = message.includes("404");
-    return Response.json(
-      {
-        error: missing ? "League not found" : "Search failed",
-        detail: missing
-          ? `No classic league exists with ID ${leagueId}, or it is private.`
-          : "The official FPL feed did not respond.",
-      },
-      { status: missing ? 404 : 503 },
-    );
+    logFplFailure("leagues/[id]/search", error);
+    const failure = describeFplFailure(error, "That league");
+    return Response.json(failure.body, { status: failure.status });
   }
 }

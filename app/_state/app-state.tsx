@@ -278,6 +278,8 @@ function useAppStateValue() {
   const [connectStatus, setConnectStatus] = useState<"idle" | "loading" | "error">("idle");
   const [connectError, setConnectError] = useState<string | null>(null);
   const [leagueStatus, setLeagueStatus] = useState<"idle" | "loading" | "error">("idle");
+  /** What the feed actually said, so the screen can say it too. */
+  const [leagueError, setLeagueError] = useState<string | null>(null);
 
   async function fetchManagerLeagues(entryId: number): Promise<ManagerLeaguesResponse> {
     const response = await fetch(`/api/leagues?entry=${entryId}`);
@@ -393,14 +395,26 @@ function useAppStateValue() {
     setSelectedLeagueId(leagueId);
     setLeagueStatus("loading");
     setLeagueInsights(null);
+    setLeagueError(null);
     try {
       const response = await fetch(`/api/leagues/${leagueId}`);
-      if (!response.ok) throw new Error("League unavailable");
-      setLeagueInsights((await response.json()) as LeagueInsightsResponse);
+      const payload = (await response.json()) as LeagueInsightsResponse & { detail?: string };
+      if (!response.ok) {
+        setLeagueStatus("error");
+        setLeagueError(payload.detail ?? "The official FPL feed did not answer.");
+        return;
+      }
+      setLeagueInsights(payload);
       setLeagueStatus("idle");
     } catch {
       setLeagueStatus("error");
+      setLeagueError("The request to the official FPL feed did not complete.");
     }
+  }
+
+  /** The feed fails briefly more often than it fails for good. */
+  function retryLeague() {
+    if (selectedLeagueId !== null) void openLeague(selectedLeagueId);
   }
 
   function disconnectTeam() {
@@ -877,7 +891,7 @@ function useAppStateValue() {
 
     // Leagues
     teamIdInput, setTeamIdInput, manager, managerLeagues, selectedLeagueId,
-    leagueInsights, connectStatus, connectError, leagueStatus,
+    leagueInsights, connectStatus, connectError, leagueStatus, leagueError, retryLeague,
     monthlyBadges, seasonBadges, currentMonth,
     connectTeam, openLeague, disconnectTeam,
 

@@ -6,6 +6,7 @@ import type {
   ManagerSummary,
 } from "../contracts/leagues.ts";
 import type { EventStatus, RawPhase } from "../league-insights.ts";
+import { fetchFpl } from "./fpl-request.ts";
 
 /**
  * Official FPL league adapter.
@@ -123,17 +124,6 @@ function leagueType(raw: string): LeagueType {
   return raw === "x" ? "invitational" : "system";
 }
 
-async function fetchJson<T>(url: string, revalidate: number): Promise<T> {
-  const response = await fetch(url, {
-    headers: { Accept: "application/json", "User-Agent": "NinetyPlus/3.0" },
-    next: { revalidate },
-  });
-  if (!response.ok) {
-    throw new Error(`FPL league provider returned ${response.status} for ${url}`);
-  }
-  return (await response.json()) as T;
-}
-
 /** Runs tasks with a fixed worker pool so a large league cannot burst. */
 async function mapWithConcurrency<T, R>(
   items: T[],
@@ -175,11 +165,11 @@ export class OfficialFplLeagueProvider implements FplLeagueProvider {
   }
 
   async loadManager(entryId: number): Promise<ManagerSummary> {
-    return toManagerSummary(await fetchJson<RawEntry>(`${BASE}/entry/${entryId}/`, 900));
+    return toManagerSummary(await fetchFpl<RawEntry>(`${BASE}/entry/${entryId}/`, 900));
   }
 
   async loadCalendar(): Promise<SeasonCalendar> {
-    const data = await fetchJson<{ phases: RawPhase[]; events: EventStatus[] }>(
+    const data = await fetchFpl<{ phases: RawPhase[]; events: EventStatus[] }>(
       `${BASE}/bootstrap-static/`,
       1_800,
     );
@@ -192,7 +182,7 @@ export class OfficialFplLeagueProvider implements FplLeagueProvider {
   }
 
   async loadManagerLeagues(entryId: number) {
-    const raw = await fetchJson<RawEntry>(`${BASE}/entry/${entryId}/`, 900);
+    const raw = await fetchFpl<RawEntry>(`${BASE}/entry/${entryId}/`, 900);
     const leagues = (raw.leagues?.classic ?? []).map<LeagueSummary>((league) => ({
       id: numeric(league.id),
       name: String(league.name),
@@ -217,7 +207,7 @@ export class OfficialFplLeagueProvider implements FplLeagueProvider {
     while (hasNext && entries.length < maxManagers) {
       const url = `${BASE}/leagues-classic/${leagueId}/standings/?page_standings=${page}`;
       requestUrls.push(url);
-      const data = await fetchJson<RawStandingsPage>(url, 900);
+      const data = await fetchFpl<RawStandingsPage>(url, 900);
       name = String(data.league?.name ?? name);
       type = leagueType(data.league?.league_type ?? "s");
       for (const result of data.standings?.results ?? []) {
@@ -270,7 +260,7 @@ export class OfficialFplLeagueProvider implements FplLeagueProvider {
     let hasNext = true;
 
     while (hasNext && page <= maxPages && matches.length < 25) {
-      const data = await fetchJson<RawStandingsPage>(
+      const data = await fetchFpl<RawStandingsPage>(
         `${BASE}/leagues-classic/${leagueId}/standings/?page_standings=${page}`,
         900,
       );
@@ -305,7 +295,7 @@ export class OfficialFplLeagueProvider implements FplLeagueProvider {
   async loadManagerSeasons(entries: LeagueStandingEntry[]): Promise<ManagerSeason[]> {
     return mapWithConcurrency(entries, this.concurrency, async (entry) => {
       try {
-        const history = await fetchJson<RawHistory>(
+        const history = await fetchFpl<RawHistory>(
           `${BASE}/entry/${entry.entryId}/history/`,
           900,
         );

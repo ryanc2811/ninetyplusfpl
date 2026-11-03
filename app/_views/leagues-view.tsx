@@ -246,6 +246,8 @@ export function LeaguesView() {
     selectedLeagueId,
     leagueInsights,
     leagueStatus,
+    leagueError,
+    retryLeague,
     openLeague,
     disconnectTeam,
     players,
@@ -304,8 +306,12 @@ export function LeaguesView() {
 
       {leagueStatus === "error" && (
         <Card>
-          <EmptyState icon="alert" title="That league could not be loaded">
-            It may be private, or the official feed may be refusing requests right now.
+          <EmptyState
+            icon="alert"
+            title="That league could not be loaded"
+            action={<Button variant="primary" onClick={retryLeague}>Try again</Button>}
+          >
+            {leagueError ?? "The official FPL feed did not answer."}
           </EmptyState>
         </Card>
       )}

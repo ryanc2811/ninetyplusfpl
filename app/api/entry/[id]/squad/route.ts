@@ -1,3 +1,4 @@
+import { describeFplFailure, logFplFailure } from "../../../../../lib/providers/fpl-request";
 import type { EntrySquadResponse } from "../../../../../lib/contracts/live";
 import { OfficialFplLeagueProvider } from "../../../../../lib/providers/league-provider";
 import { OfficialFplLiveProvider } from "../../../../../lib/providers/live-provider";
@@ -65,10 +66,9 @@ export async function GET(
     return Response.json(response, {
       headers: { "Cache-Control": "public, max-age=300, s-maxage=300, stale-while-revalidate=900" },
     });
-  } catch {
-    return Response.json(
-      { error: "Squad lookup failed", detail: "The official FPL feed did not respond." },
-      { status: 503 },
-    );
+  } catch (error) {
+    logFplFailure("entry/[id]/squad", error);
+    const failure = describeFplFailure(error, "That team");
+    return Response.json(failure.body, { status: failure.status });
   }
 }

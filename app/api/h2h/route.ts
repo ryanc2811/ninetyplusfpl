@@ -1,3 +1,4 @@
+import { describeFplFailure, logFplFailure } from "../../../lib/providers/fpl-request";
 import type { DifferentialPlayer, HeadToHeadResponse } from "../../../lib/contracts/live";
 import { applyAutomaticSubs } from "../../../lib/auto-subs";
 import { provisionalBonus } from "../../../lib/live-bonus";
@@ -175,10 +176,9 @@ export async function GET(request: Request) {
     return Response.json(response, {
       headers: { "Cache-Control": "public, max-age=30, s-maxage=30, stale-while-revalidate=120" },
     });
-  } catch {
-    return Response.json(
-      { error: "Head-to-head failed", detail: "The official FPL feed did not respond." },
-      { status: 503 },
-    );
+  } catch (error) {
+    logFplFailure("h2h", error);
+    const failure = describeFplFailure(error, "One of those teams");
+    return Response.json(failure.body, { status: failure.status });
   }
 }
