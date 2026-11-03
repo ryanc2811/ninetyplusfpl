@@ -31,6 +31,10 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
+
+# wrangler local secrets
+.dev.vars
+.dev.vars.*
 **/.venv/
 **/__pycache__/
 *.py[cod]

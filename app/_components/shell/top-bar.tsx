@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { useAppState } from "../../_state/app-state";
 import { LiveDot } from "../ui/live-dot";
 import { currentNavItem } from "./nav";
+import { SignOutButton } from "./sign-out";
 import { ThemeToggle } from "./theme-toggle";
 
 /**
@@ -11,7 +12,7 @@ import { ThemeToggle } from "./theme-toggle";
  * breakpoint, because an hour before kickoff that is the one thing a manager
  * must never have to hunt for.
  */
-export function TopBar() {
+export function TopBar({ gated = false }: { gated?: boolean }) {
   const pathname = usePathname();
   const { nextEvent, deadlineLabel, live } = useAppState();
   const title = currentNavItem(pathname).label;
@@ -29,6 +30,7 @@ export function TopBar() {
         <h1 className="t-title-1 m-0 truncate">{title}</h1>
         <div className="flex flex-none items-center gap-2">
           <ThemeToggle />
+          {gated && <SignOutButton />}
         </div>
       </div>
     </header>

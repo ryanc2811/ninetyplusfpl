@@ -1,4 +1,4 @@
-import { HeadToHeadView } from "../../../../_views/h2h-view";
+import { HeadToHeadView } from "../../../../../_views/h2h-view";
 
 export default async function HeadToHeadPage({
   params,

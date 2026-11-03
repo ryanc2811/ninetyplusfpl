@@ -120,6 +120,35 @@ Environment variables are all optional:
 | --- | --- |
 | `FPL_DATA_API_URL` | The web app reads the official FPL API directly instead of the Python data service. |
 | `LEAGUE_MAX_MANAGERS` | League analysis covers up to 50 managers. |
+| `SITE_PASSPHRASE` | The site is open. Set it to put the whole deployment behind one shared passphrase. |
+
+### Private preview
+
+`SITE_PASSPHRASE` puts every page and every API route behind one shared
+passphrase, enforced by `proxy.ts` on both targets. A correct passphrase is
+exchanged for a signed, HttpOnly cookie that lasts thirty days; changing the
+passphrase invalidates every cookie, because the signing key is derived from
+it.
+
+```bash
+# Cloudflare, locally: .dev.vars (gitignored) — the Worker reads it as process.env
+echo 'SITE_PASSPHRASE="a shared passphrase"' > .dev.vars
+
+# Cloudflare, deployed
+npx wrangler secret put SITE_PASSPHRASE
+
+# Vercel
+npx vercel env add SITE_PASSPHRASE
+```
+
+A shell variable is not enough for the Workers runtime: it reads `.dev.vars`
+and wrangler secrets, not the parent shell. Vercel reads its own project
+variables as usual.
+
+This is a door, not a security boundary. Everyone who gets in is the same
+anonymous visitor, there are no accounts, and nothing inside the app is
+protected from anyone who has the passphrase. For per-person access without
+application code, put Cloudflare Access in front of the Worker instead.
 
 League insights cost one upstream request per manager, so `/api/leagues/[id]`
 declares `maxDuration = 60`. Lower `LEAGUE_MAX_MANAGERS` if a host's function
